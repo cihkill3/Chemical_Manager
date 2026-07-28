@@ -1,0 +1,27 @@
+﻿powershell : At C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\Inspect-OrderBook.ps1:84 char:49
+At line:1 char:1
++ powershell -ExecutionPolicy Bypass -File "Inspect-OrderBook.ps1" 2>&1 ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (At C:\Users\Jeo....ps1:84 char:49:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
++         Write-Host "  ?쒖빟 ?댁뿉 媛??덈뒗 ???? $oCount"
++                                                 ~
+The string is missing the terminator: ".
+At C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\Inspect-OrderBook.ps1:93 char:1
++ 
+Missing closing ')' in expression.
+At C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\Inspect-OrderBook.ps1:12 char:33
++     foreach ($wsIdx in @(1, 2)) {
++                                 ~
+Missing closing '}' in statement block or type definition.
+At C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\Inspect-OrderBook.ps1:9 char:5
++ try {
++     ~
+Missing closing '}' in statement block or type definition.
+At C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\Inspect-OrderBook.ps1:93 char:1
++ 
+The Try statement is missing its Catch or Finally block.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : TerminatorExpectedAtEndOfString
+ 
