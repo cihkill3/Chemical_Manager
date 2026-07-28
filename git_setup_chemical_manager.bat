@@ -5,7 +5,7 @@ REM ===============================================
 REM Polymer MS Studio Project Setup
 REM ===============================================
 
-set PROJECT_NAME=Chemical Manager
+set PROJECT_NAME=Chemical_Manager
 set GITHUB_ID=cihkill3
 
 echo.
