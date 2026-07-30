@@ -65,6 +65,7 @@
         "header_bg": "#d9d9d9",
         "header_font": "#000000"
     },
-    "sync_interval_minutes": 10,
-    "watch_enabled": true
+    "sync_interval_minutes": 0,
+    "watch_enabled": false,
+    "run_on_startup": false
 }

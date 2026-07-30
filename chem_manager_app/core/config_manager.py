@@ -57,7 +57,8 @@ DEFAULT_CONFIG = {
         "header_font": "#000000"
     },
     "sync_interval_minutes": 0,
-    "watch_enabled": False
+    "watch_enabled": False,
+    "run_on_startup": False
 }
 
 def load_config():

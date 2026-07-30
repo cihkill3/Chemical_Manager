@@ -120,9 +120,13 @@ class MainWindow(QMainWindow):
         self.spin_interval.setValue(self.config.get("sync_interval_minutes", 0))
         self.spin_interval.setSuffix(" 분 (0: 사용안함)")
         
+        self.chk_startup = QCheckBox("윈도우 시작 시 자동 실행 (시스템 트레이)")
+        self.chk_startup.setChecked(self.config.get("run_on_startup", False))
+        
         form_auto.addRow(self.btn_toggle_auto)
         form_auto.addRow(self.chk_watch)
         form_auto.addRow("주기적 업데이트 간격:", self.spin_interval)
+        form_auto.addRow(self.chk_startup)
         g_automation.setLayout(form_auto)
         main_layout.addWidget(g_automation)
         
@@ -270,21 +274,36 @@ class MainWindow(QMainWindow):
             self.log("색상 설정이 업데이트 되었습니다.")
 
     def show_guide(self):
-        guide_text = """<h3>[프로그램 사용 방법 및 주의사항]</h3>
+        guide_text = """<h3>[프로그램 및 Chemical List 사용 가이드]</h3>
 <b>1. 기본 동작 원리 및 저장 기준</b><br>
-- 프로그램은 원본 <b>Orderbook.xlsx (주문대장)</b> 파일의 변경을 감지하거나 수동으로 버튼을 누르면 데이터를 읽어옵니다.<br>
-- 대상 폴더에 있는 파일 중 이름에 적힌 날짜와 시간이 가장 최신인 ChemicalList 파일을 기준으로 삼습니다.<br>
-- 업데이트가 완료되면 덮어쓰기 대신 새로운 날짜/시간이 적힌 새 파일을 생성하며, 기존의 낡은 파일들은 안전하게 'Old Chemical List' 폴더로 자동 이동됩니다.<br><br>
+- 프로그램은 원본 Orderbook 파일의 변경을 감지하여 데이터를 읽어옵니다.<br>
+- 폴더 내에서 이름에 적힌 날짜/시간이 가장 최신인 ChemicalList 파일을 기준으로 삼습니다.<br>
+- 업데이트 완료 시 덮어쓰기 대신 새로운 날짜/시간이 적힌 새 파일(ChemicalList_YYYYMMDD_HHMMSS)을 생성합니다.<br>
+- 기존의 낡은 파일들은 안전하게 'Old Chemical List' 폴더로 자동 이동됩니다.<br>
+- 로그 파일에는 변경되는 내용을 월별로 기입합니다.<br><br>
 
 <b>2. 사용자 작성 시 유의사항 (Orderbook 및 Chemical List)</b><br>
-- <b>빈 줄 금지:</b> 데이터 중간에 완전히 비어있는 줄이 있으면 데이터를 읽다가 중단될 수 있으므로, 차례대로 기입해 주세요.<br>
-- <b>동기화 기준:</b> 시약명과 카탈로그 번호 등을 기준으로 기존에 등록된 시약인지 새 시약인지 판단합니다.<br>
-- <b>수령 확인 (Status):</b> 시약을 수령한 뒤 수령 확인(Status) 열에 대소문자 'O' 또는 한글 'ㅇ'을 입력하면 동기화가 감지되며, PDF 출력 시 필터링 조건으로 활용할 수 있습니다.<br>
-- <b>드롭다운 선택:</b> 캐비넷(Cabinet) 정보 등은 Room과 Storage Temp. 조건에 따라 유효성 검사 드롭다운 목록이 동적으로 변합니다. 잘못된 값을 억지로 입력하지 않도록 유의하세요.<br><br>
+- 오더북의 "번호, 날짜, 주문자, 품목명, 시약, 수령확인, 회사, 수량, 용량, CAS 번호, 품번, 보관온도" 열의 내용을 자동으로 동기화합니다.<br>
+- 오더북을 작성할 때 없는 열은 새로 생성해주고 해당 셀의 내용을 충실하게 적어주세요<br>
+- 오더북의 시약 및 수령확인 셀에 모두 "O"표시가 되어있는 행만 사용합니다.<br>
+- 동기화 기준: 오더북 '번호'를 기준으로 기존에 등록된 시약인지 새 시약인지 판단합니다.<br>
+- 오더북에 Order No.가 있고 시약 및 수령확인에 "O"가 표시된 행은 모두 동기화합니다.<br>
+- 시약리스트에 한번 업데이트가 되었어도 다음 동기화 때 오더북에 있는 데이터를 덮어씁니다. 오더북에서 불러온 데이터는 수정하지 마세요<br>
+- Aliquat하는 경우 시약리스트의 항목을 삭제하지 말고 used에 숫자를 기입하고 새로운 행에 내용을 기입하고 개수를 적어주세요.<br>
+- 시약리스트에 Order No.가 없는 행은 동기화에서 제외됩니다.<br>
+- 수동으로 데이터를 추가할 때에는 새로운 행에 Order No.없이 내용을 적어 놓으면 됩니다 (product name은 필수입니다).<br>
+- 수령 확인 : 수령 후 수령확인 열에 'O' 또는 'ㅇ'을 입력하면 수령으로 간주되며, 시약리스트 업데이트에 사용합니다.<br>
+- 빈 줄 금지: 데이터 중간에 완전히 비어있는 줄이 있으면 데이터를 읽다가 중단될 수 있으므로 차례대로 기입하세요.<br>
+- 드롭다운 선택: 캐비넷(Cabinet)은 Room과 Storage Temp.에 따라 동적으로 변하므로 잘못된 값을 억지로 쓰지 마세요.<br><br>
 
 <b>3. 프로그램 사용 주의사항</b><br>
-- <b>열린 파일 처리:</b> Chemical List 엑셀 파일이 켜져 있어도 프로그램이 알아서 우회하여 새 파일을 생성하지만, 원본인 <b>Orderbook 파일은 엑셀에서 저장을 완료해야만</b> 프로그램이 변경 사항을 정확히 감지할 수 있습니다.<br>
-- <b>자동 동기화:</b> 자동 동기화 켜짐 상태에서는 Orderbook을 저장할 때마다 병합이 진행됩니다. 엑셀 작업 중 빈번한 동기화가 불편하다면 '자동 동기화 정지' 버튼을 누르고, 작업 완료 후 수동 동기화를 진행하세요.
+- 열린 파일 처리: Chemical List 엑셀 파일이 켜져 있어도 프로그램이 알아서 우회하여 새 파일을 생성합니다.<br>
+- 단, 원본인 Orderbook 파일은 엑셀에서 저장을 완료해야만 프로그램이 변경 사항을 정확히 감지할 수 있습니다.<br>
+- 자동 동기화 켜짐 상태에서는 Orderbook을 저장할 때마다 병합이 진행되므로, 수동 제어를 원하시면 정지 버튼을 누르세요.<br><br>
+
+<hr>
+<b>제작자:</b> Jeonghun Lee<br>
+<b>문의:</b> jhl22@hanyang.ac.kr
 """
         msg = QMessageBox(self)
         msg.setWindowTitle("도움말 및 주의사항")
@@ -302,6 +321,11 @@ class MainWindow(QMainWindow):
         else:
             self.config["watch_enabled"] = self.chk_watch.isChecked()
             self.config["sync_interval_minutes"] = self.spin_interval.value()
+        
+        self.config["run_on_startup"] = self.chk_startup.isChecked()
+        
+        import utils.startup_manager as sm
+        sm.set_run_on_startup(self.config["run_on_startup"])
         
         self.config_updated.emit(self.config)
 

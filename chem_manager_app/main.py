@@ -1,6 +1,7 @@
 import sys
 import os
 import msvcrt
+import argparse
 from PyQt6.QtWidgets import QApplication, QStyle
 from PyQt6.QtGui import QIcon
 
@@ -10,7 +11,8 @@ from gui.main_window import MainWindow, SyncWorker
 from gui.tray_icon import TrayIcon
 
 class AppController:
-    def __init__(self):
+    def __init__(self, start_minimized=False):
+        self.start_minimized = start_minimized
         self.app = QApplication(sys.argv)
         
         # Single Instance Check
@@ -46,10 +48,15 @@ class AppController:
         self.tray_icon.exit_requested.connect(self.quit_app)
         self.tray_icon.show()
         
-        # Show Window initially
-        self.main_window.show()
-        
         self.bg_worker = None
+        
+        if self.start_minimized:
+            self.tray_icon.show_message("백그라운드 실행", "앱이 트레이에서 시작되었습니다. 자동 동기화를 진행합니다.")
+            # Call on_background_sync immediately to run the sync
+            self.on_background_sync()
+        else:
+            # Show Window initially
+            self.main_window.show()
 
     def on_config_updated(self, new_config):
         self.config = new_config
@@ -95,5 +102,9 @@ class AppController:
         sys.exit(self.app.exec())
 
 if __name__ == "__main__":
-    controller = AppController()
+    parser = argparse.ArgumentParser(description="Chemical Manager App")
+    parser.add_argument('-a', '--auto', action='store_true', help='Start minimized in tray and auto-sync')
+    args = parser.parse_args()
+
+    controller = AppController(start_minimized=args.auto)
     controller.run()
