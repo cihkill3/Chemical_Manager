@@ -1,0 +1,104 @@
+﻿============================================================
+1. Sigma-Aldrich SDS 직접 다운로드 테스트
+============================================================
+    오류: HTTPSConnectionPool(host='www.sigmaaldrich.com', port=443): Read timed out. (read timeout=30)
+    Selenium -> URL: https://www.sigmaaldrich.com/KR/en/sds/aldrich/803200, CT: application/pdf
+    PDF blob 오류: Message: <unknown>: Failed to set the 'responseType' property on 'XMLHttpRequest': The response type cannot be changed for synchronous requests made from a document.
+  (Session info: chrome=150.0.7871.188)
+Stacktrace:
+	uc_driver!GetHandleVerifier [0x7ff7ab460d25+155a5]
+	uc_driver!GetHandleVerifier [0x7ff7ab460d80+15600]
+	uc_driver!(No symbol) [0x7ff7aafb594d]
+	uc_driver!(No symbol) [0x7ff7aafbd8c1]
+	uc_driver!(No symbol) [0x7ff7aafc0c1f]
+	uc_driver!(No symbol) [0x7ff7ab05f292]
+	uc_driver!(No symbol) [0x7ff7ab0391ca]
+	uc_driver!(No symbol) [0x7ff7ab05e01b]
+	uc_driver!(No symbol) [0x7ff7ab002e6c]
+	uc_driver!(No symbol) [0x7ff7ab003d93]
+	uc_driver!GetHandleVerifier [0x7ff7aba46431+5facb1]
+	uc_driver!GetHandleVerifier [0x7ff7aba40a9b+5f531b]
+	uc_driver!GetHandleVerifier [0x7ff7aba65865+61a0e5]
+	uc_driver!GetHandleVerifier [0x7ff7ab47dace+3234e]
+	uc_driver!GetHandleVerifier [0x7ff7ab48661c+3ae9c]
+	uc_driver!GetHandleVerifier [0x7ff7ab46ab74+1f3f4]
+	uc_driver!GetHandleVerifier [0x7ff7ab46ad04+1f584]
+	uc_driver!GetHandleVerifier [0x7ff7ab44d9d7+2257]
+	KERNEL32!BaseThreadInitThunk [0x7ff8ba6c7374+14]
+	ntdll!RtlUserThreadStart [0x7ff8bbebcc91+21]
+
+결과: 실패
+
+    오류: HTTPSConnectionPool(host='www.sigmaaldrich.com', port=443): Read timed out. (read timeout=30)
+    Selenium -> URL: https://www.sigmaaldrich.com/KR/en/sds/aldrich/909270, CT: application/pdf
+    PDF blob 오류: Message: <unknown>: Failed to set the 'responseType' property on 'XMLHttpRequest': The response type cannot be changed for synchronous requests made from a document.
+  (Session info: chrome=150.0.7871.188)
+Stacktrace:
+	uc_driver!GetHandleVerifier [0x7ff7ab460d25+155a5]
+	uc_driver!GetHandleVerifier [0x7ff7ab460d80+15600]
+	uc_driver!(No symbol) [0x7ff7aafb594d]
+	uc_driver!(No symbol) [0x7ff7aafbd8c1]
+	uc_driver!(No symbol) [0x7ff7aafc0c1f]
+	uc_driver!(No symbol) [0x7ff7ab05f292]
+	uc_driver!(No symbol) [0x7ff7ab0391ca]
+	uc_driver!(No symbol) [0x7ff7ab05e01b]
+	uc_driver!(No symbol) [0x7ff7ab002e6c]
+	uc_driver!(No symbol) [0x7ff7ab003d93]
+	uc_driver!GetHandleVerifier [0x7ff7aba46431+5facb1]
+	uc_driver!GetHandleVerifier [0x7ff7aba40a9b+5f531b]
+	uc_driver!GetHandleVerifier [0x7ff7aba65865+61a0e5]
+	uc_driver!GetHandleVerifier [0x7ff7ab47dace+3234e]
+	uc_driver!GetHandleVerifier [0x7ff7ab48661c+3ae9c]
+	uc_driver!GetHandleVerifier [0x7ff7ab46ab74+1f3f4]
+	uc_driver!GetHandleVerifier [0x7ff7ab46ad04+1f584]
+	uc_driver!GetHandleVerifier [0x7ff7ab44d9d7+2257]
+	KERNEL32!BaseThreadInitThunk [0x7ff8ba6c7374+14]
+	ntdll!RtlUserThreadStart [0x7ff8bbebcc91+21]
+
+결과: 실패
+
+
+============================================================
+2. Thermo Fisher SDS 다운로드 테스트
+============================================================
+  [L09319] URL 발견 (suffix='.MD'): https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L09319&sku=L09319.MD&erp_type=KR_E1_LCD&countryCode=kr
+  Status: 200, CT: application/pdf
+  PDF 내용 (첫 200자): Product Specification
+Product Name:
+Fluorescein isothiocyanate, isomer 1, 95%
+Catalog Number:
+L09319.MD
+CAS Number:
+3326-32-7
+IUPAC Name:
+3',6'-dihydroxy-5-isothiocyanato-3H-spiro[2-benzofuran-1,9'-xa
+  저장: sds_downloads\SDS_TF_L09319.pdf
+결과: sds_downloads\SDS_TF_L09319.pdf
+
+  [L16400] URL 발견 (suffix='.06'): https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L16400&sku=L16400.06&erp_type=KR_E1_LCD&countryCode=kr
+  Status: 200, CT: application/pdf
+  PDF 내용 (첫 200자): Product Specification
+Product Name:
+3-(Acryloyloxy)propyltrimethoxysilane, 94%, stab. with 100ppm
+BHT
+Catalog Number:
+L16400.06
+CAS Number:
+4369-14-6
+IUPAC Name:
+3-(trimethoxysilyl)propyl prop-2-enoat
+  저장: sds_downloads\SDS_TF_L16400.pdf
+결과: sds_downloads\SDS_TF_L16400.pdf
+
+
+============================================================
+3. TCI SDS 다운로드 테스트
+============================================================
+  [C0119] SDS 링크: [{'href': 'https://www.tcichemicals.com/KR/en/p/C0119#docomentsSectionPDP', 'text': 'sds'}]
+  클릭 후 새 URL: https://www.tcichemicals.com/KR/en/p/C0119#docomentsSectionPDP
+결과: 실패
+
+  [T0751] SDS 링크: [{'href': 'https://www.tcichemicals.com/KR/en/p/T0751#docomentsSectionPDP', 'text': 'sds'}]
+  클릭 후 새 URL: https://www.tcichemicals.com/KR/en/p/T0751#docomentsSectionPDP
+결과: 실패
+

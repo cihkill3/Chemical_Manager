@@ -1,0 +1,31 @@
+﻿GraphQL 필드 탐색:
+
+[getVectorDocument] Status: 400
+  {"errors":[{"message":"Unknown argument \"productNumber\" on field \"Query.getVectorDocument\".","locations":[{"line":1,"column":21}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}},{"message":"Unknown argument \"brand\" on field \"Query.getVectorDocument\".","locations":[{"line":1,"column":46}],
+
+[getVectorDocument with language] Status: 400
+  {"errors":[{"message":"Unknown argument \"productNumber\" on field \"Query.getVectorDocument\".","locations":[{"line":1,"column":21}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}},{"message":"Unknown argument \"brand\" on field \"Query.getVectorDocument\".","locations":[{"line":1,"column":46}],
+
+[getDocument] Status: 400
+  {"errors":[{"message":"Cannot query field \"getDocument\" on type \"Query\". Did you mean \"getDocLib\"?","locations":[{"line":1,"column":3}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}
+
+
+[getPdf] Status: 400
+  {"errors":[{"message":"Cannot query field \"getPdf\" on type \"Query\".","locations":[{"line":1,"column":3}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}
+
+
+[product] Status: 400
+  {"errors":[{"message":"Cannot query field \"product\" on type \"Query\".","locations":[{"line":1,"column":3}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}}]}
+
+
+[getProductDetail] Status: 400
+  {"errors":[{"message":"Unknown argument \"productNumber\" on field \"Query.getProductDetail\".","locations":[{"line":1,"column":20}],"extensions":{"code":"GRAPHQL_VALIDATION_FAILED"}},{"message":"Unknown argument \"brand\" on field \"Query.getProductDetail\".","locations":[{"line":1,"column":45}],"e
+
+
+Selenium으로 실제 GraphQL 요청 포착:
+API 관련 요청들: []
+XHR 로그: []
+LocalStorage PDF: {}
+페이지 내 GraphQL queries: set()
+페이지 내 GraphQL mutations: set()
+API URL 패턴들: []

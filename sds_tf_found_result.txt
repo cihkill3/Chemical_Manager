@@ -1,0 +1,29 @@
+﻿============================================================
+Thermo Fisher SDS PDF 다운로드 테스트
+============================================================
+
+[L09319 - Fluorescein isothiocyanate]
+  발견된 PDF URL: https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L09319
+  상태: 400, Content-Type: application/json
+  PDF 아님, 응답 크기: 117, 첫 200바이트: b'{"timestamp":"2026-08-04T06:29:54.167+00:00","status":400,"error":"Bad Request","path":"/chem-specs-pdf/retrievePdf"}'
+결과: 실패
+
+
+[L16400 - Acryloyloxy propyltrimethoxysilane]
+  발견된 PDF URL: https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L16400
+  상태: 400, Content-Type: application/json
+  PDF 아님, 응답 크기: 117, 첫 200바이트: b'{"timestamp":"2026-08-04T06:30:13.636+00:00","status":400,"error":"Bad Request","path":"/chem-specs-pdf/retrievePdf"}'
+결과: 실패
+
+
+============================================================
+Sigma-Aldrich SDS PDF 탐색
+============================================================
+
+[803200 - DTSSP]
+  Aldrich PDF 링크: []
+  JSON URL 패턴: []
+  JS 변수 URL: []
+  Fetch SDS URL: []
+결과: 실패
+

@@ -1,0 +1,15 @@
+[TCI - C0119]
+신호어: ● 위험
+주요위험: ▲ 부식성/눈손상
+상세위험: H302 : Harmful if swallowed. H314 : Causes severe skin burns and eye damage.
+---
+[Aldrich - 704060F]
+신호어: 정보 없음
+주요위험: 정보 없음
+상세위험: 정보 없음
+---
+[Abcam - ab76003]
+신호어: 정보 없음
+주요위험: 정보 없음
+상세위험: 정보 없음
+---

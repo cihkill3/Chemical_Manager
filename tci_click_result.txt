@@ -1,0 +1,14 @@
+﻿  [C0119] 페이지 로드 중...
+  [C0119] SDS 버튼 클릭 시도...
+  버튼 클릭 성공 여부: True
+  포착된 요청 수: 6
+    - POST https://analytics.google.com/g/collect?v=2&tid=G-0HFL4E4NDY&gtm=45je6831v898803394za20gzb6284148zd6284148&_p=1785906925323&gcs=G111&gcd=13t3t3t3t5l1&npa=0&dma=0&ecid=1662784337&_eu=AAgAAGQC&are=1&cid=1743000176.1785906927&frm=0&pscdl=noapi&rcb=8&sr=800x600&uaa=&uab=&uafvl=&uam=&uamb=0&uap=Windows&uapv=&uaw=0&ul=ko-kr&gaf=2&_s=2&tag_exp=115616985~115938466~115938469~118395334~118897920~118897930~119527020~119896803&sid=1785906926&sct=1&seg=0&dl=https%3A%2F%2Fwww.tcichemicals.com%2FKR%2Fen%2Fp%2FC0119&dt=1%2C1'-Carbonyldiimidazole%20%7C%20530-62-1%20%7C%20Tokyo%20Chemical%20Industry%20Co.%2C%20Ltd.(APAC)&_tu=QA&en=view_item&ep.content_group=TCI-AP&_et=3&tfd=7405
+      Body: 
+    - POST https://analytics.google.com/g/collect?v=2&tid=G-N2PRBYWQJQ&gtm=45je6831v888120514za20gzb6284148zd6284148&_p=1785906925323&gcs=G111&gcd=13t3t3t3t5l1&npa=0&dma=0&ecid=1326346003&_eu=AAgAAGQC&are=1&cid=1743000176.1785906927&frm=0&pscdl=noapi&rcb=19&sr=800x600&uaa=&uab=&uafvl=&uam=&uamb=0&uap=Windows&uapv=&uaw=0&ul=ko-kr&gaf=2&_s=2&tag_exp=115938466~115938469~118897920~118897930~119896803&sid=1785906926&sct=1&seg=0&dl=https%3A%2F%2Fwww.tcichemicals.com%2FKR%2Fen%2Fp%2FC0119&dt=1%2C1'-Carbonyldiimidazole%20%7C%20530-62-1%20%7C%20Tokyo%20Chemical%20Industry%20Co.%2C%20Ltd.(APAC)&en=view_item&_et=23&tfd=7405
+      Body: 
+    - POST https://bat.bing.com/p/conversions/c/r
+    - POST https://r.clarity.ms/collect
+    - POST https://analytics.google.com/g/collect?v=2&tid=G-N2PRBYWQJQ&gtm=45je6831v888120514za20gzb6284148zd6284148&_p=1785906925323&gcs=G111&gcd=13t3t3t3t5l1&npa=0&dma=0&ecid=1326346003&_eu=AEAAAGQC&ae=a&are=1&cid=1743000176.1785906927&frm=0&pscdl=noapi&rcb=19&sr=800x600&uaa=&uab=&uafvl=&uam=&uamb=0&uap=Windows&uapv=&uaw=0&ul=ko-kr&gaf=2&_s=3&tag_exp=115938466~115938469~118897920~118897930~119896803&sid=1785906926&sct=1&seg=0&dl=https%3A%2F%2Fwww.tcichemicals.com%2FKR%2Fen%2Fp%2FC0119&dt=1%2C1'-Carbonyldiimidazole%20%7C%20530-62-1%20%7C%20Tokyo%20Chemical%20Industry%20Co.%2C%20Ltd.(APAC)&en=scroll&epn.percent_scrolled=90&_et=7222&tfd=14645
+      Body: 
+    - POST https://analytics.google.com/g/collect?v=2&tid=G-0HFL4E4NDY&gtm=45je6831v898803394za20gzb6284148zd6284148&_p=1785906925323&gcs=G111&gcd=13t3t3t3t5l1&npa=0&dma=0&ecid=1662784337&_eu=AEAAAGQC&ae=a&are=1&cid=1743000176.1785906927&frm=0&pscdl=noapi&rcb=8&sr=800x600&uaa=&uab=&uafvl=&uam=&uamb=0&uap=Windows&uapv=&uaw=0&ul=ko-kr&gaf=2&_s=3&tag_exp=115616985~115938466~115938469~118395334~118897920~118897930~119527020~119896803&sid=1785906926&sct=1&seg=0&dl=https%3A%2F%2Fwww.tcichemicals.com%2FKR%2Fen%2Fp%2FC0119&dt=1%2C1'-Carbonyldiimidazole%20%7C%20530-62-1%20%7C%20Tokyo%20Chemical%20Industry%20Co.%2C%20Ltd.(APAC)&_tu=QA&en=scroll&ep.content_group=TCI-AP&epn.percent_scrolled=90&_et=7235&tfd=14645
+      Body: 

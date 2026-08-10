@@ -1,0 +1,22 @@
+﻿Initializing browser (UC Mode)...
+
+Processing: thermo fisher - L09319
+ -> Found in DB
+
+Processing: thermo fisher - L16400
+ -> Found in DB
+
+Processing: TCI - C0119
+ -> Found in DB
+
+Processing: TCI - T0751
+ -> Found in DB
+
+Processing: aldrich - 803200
+ -> Found in DB
+
+Processing: aldrich - 909270-10G
+ -> Found in DB
+
+Closing browser...
+Processing complete. Result saved to result.xlsx

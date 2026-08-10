@@ -1,0 +1,1197 @@
+DTSSP 80 Sigma-Aldrich
+
+
+콘텐츠로 건너뛰기
+제품
+장바구니
+0
+KR
+KO
+제품
+제품
+애플리케이션
+서비스
+리소스
+지원
+로그인 / 등록
+주문 조회
+빠른 주문
+장바구니
+0
+Products
+803200
+주요 문서
+SDS
+COA
+COO
+모든 문서 보기
+다음으로 건너뛰기
+속성
+설명
+유사한 품목 비교
+안전성 정보
+문서
+관련 참고 프로토콜
+관련 참고 논문
+질의 응답
+후기
+803200
+공유하기
+DTSSP (3,3′-dithiobis(sulfosuccinimidyl propionate))
+
+      평점 값 없음
+      같은 페이지 링크.
+ 
+(0)
+후기 작성
+질문하기
+동의어(들)
+: 
+DTSSP, bis(sulfosuccinimidyl) 3,3′-dithiobis(propionate)
+조직 및 계약 가격을 보려면 
+로그인
+를 클릭합니다.
+크기 선택
+보기 변경
+팩 크기/SKU
+재고 정보
+가격 (VAT 별도)
+50 mg
+803200-50MG
+예상 입고일
+2026년 8월 13일
+재고 수량 조회
+Seoul Warehouse South Korea
+₩336,676
+제품정보 (DICE 배송 시 비용 별도)
+실험식(Hill 표기법):
+C
+14
+H
+14
+N
+2
+O
+14
+S
+4
+Na
+2
+CAS 번호:
+81069-02-5
+Molecular Weight:
+608.51
+NACRES:
+NA.22
+PubChem Substance ID:
+329768788
+UNSPSC Code:
+12352108
+MDL number:
+MFCD00054980
+803200-50MG
+₩336,676
+예상 입고일
+2026년 8월 13일
+세부사항
+​
+장바구니에 추가
+맞춤 주문 요청하기
+기술 서비스
+도움이 필요하신가요? 저희 숙련된 과학자 팀이 도와드리겠습니다.
+도움 문의
+추천 제품
+Slide 1 of 10
+1 of 3
+Sigma-Aldrich
+D3669
+3,3′-Dithiodipropionic acid di(N-hydroxysuccinimide ester)
+빠른 보기
+Sigma-Aldrich
+901699
+3-Mercaptopropanyl-
+N
+-hydroxysuccinimide ester
+빠른 보기
+Sigma-Aldrich
+909599
+DHSO crosslinker
+빠른 보기
+Sigma-Aldrich
+S5799
+Suberic acid bis(3-sulfo-N-hydroxysuccinimide ester) sodium salt
+빠른 보기
+Sigma-Aldrich
+109010
+3,3′-Dithiodipropionic acid
+빠른 보기
+Sigma-Aldrich
+74104
+4-(4,6-Dimethoxy-1,3,5-triazin-2-yl)-4-methylmorpholinium chloride
+빠른 보기
+Sigma-Aldrich
+M6250
+2-Mercaptoethanol
+빠른 보기
+Sigma-Aldrich
+P3415
+3-(2-Pyridyldithio)propionic acid 
+N
+-hydroxysuccinimide ester
+빠른 보기
+Sigma-Aldrich
+761524
+Dibenzocyclooctyne-
+N
+-hydroxysuccinimidyl ester
+빠른 보기
+Sigma-Aldrich
+QBD11095
+m-dPEG 
+®
+25
+-amido-dPEG 
+®
+24
+-DSPE
+빠른 보기
+속성
+assay
+≥80%
+Quality Segment
+100
+form
+powder
+mol wt
+ 608.51
+reaction suitability
+reagent type: cross-linking reagent
+storage condition
+desiccated
+solubility
+soluble (>6mg/ml in water)
+shipped in
+ambient
+storage temp.
+2-8°C
+SMILES string
+O=C(CC1S(=O)([O-])=O)N(OC(CCSSCCC(ON2C(CC(S(=O)([O-])=O)C2=O)=O)=O)=O)C1=O.[Na+].[Na+]
+InChI
+1S/C14H16N2O14S4.2Na/c17-9-5-7(33(23,24)25)13(21)15(9)29-11(19)1-3-31-32-4-2-12(20)30-16-10(18)6-8(14(16)22)34(26,27)28;;/h7-8H,1-6H2,(H,23,24,25)(H,26,27,28);;/q;2*+1/p-2
+InChI key
+XRWWBWZHHSXBNC-UHFFFAOYSA-L
+설명
+General description
+DTSSP is 3,3′-Dithiobis(sulfosuccinimidylpropionate), which contains an amine-reactive N-hydroxysulfosuccinimide (sulfo-NHS) ester at each end of an 8-carbon spacer arm. Sulfo-NHS esters react with primary amines at pH 7-9 to form stable amide bonds, along with release of the N-hydroxysulfosuccinimide leaving group. Proteins, including antibodies, generally have several primary amines in the side chain of lysine (K) residues and the N-terminus of each polypeptide that are available as targets for sulfo-NHS-ester crosslinking reagents. DSS, the non-sulfonated analog of DTSSP is also available for applications that require a membrane-permeable crosslinker.
+Application
+Enhancing Ocular Antisense Oligonucleotide Delivery:
+ Utilizing Cowpea Chlorotic Mottle Virus-like particles, this study incorporates DTSSP for the enhancement of antisense oligonucleotide delivery targeting posterior segment ocular diseases, demonstrating a novel approach in biocompatible drug delivery systems (
+Pretto et al., 2021
+).
+Regulation of Integrin-Tetraspanin Interactions:
+ DTSSP is utilized to stabilize interactions between integrins and the tetraspanin CD9, providing critical insights into cell adhesion and signaling mechanisms, relevant to cancer and other pathologies (
+Torres-Gómez et al., 2021
+).
+Gene Delivery Platform Development:
+ A study on adeno-associated viral vectors employs DTSSP for cross-linking to tune cellular tropisms and enhance gene delivery, showing potential for targeted gene therapy applications (
+Yoo et al., 2020
+).
+Protein Interactor Identification:
+ DTSSP is instrumental in identifying interactors of the Arabidopsis thaliana Plant Natriuretic Peptide (AtPNP-A) using mass spectrometry, aiding in the understanding of plant signaling pathways (
+Turek et al., 2020
+).
+Protein Delivery via Nanoparticles:
+ Research on poly(l-lysine)-grafted-poly(ethylene glycol) nanoparticles highlights the use of DTSSP for redox-responsive crosslinking, improving the delivery mechanisms for therapeutic proteins (
+Seaberg et al., 2020
+).
+Features and Benefits
+Reactive groups: sulfo-NHS ester (both ends)
+Reactive towards: amino groups (primary amines)
+Sulfo-NHS ester reacts rapidly with any primary amine-containing molecule
+Disulfide bond in the spacer arm is readily cleaved by 10-50 mM DTT or TCEP at pH 8.5
+Spacer arm also easily cleaved with reducing SDS-PAGE sample loading
+Cleavable crosslinker allows separation of crosslinked products
+Water-soluble; compare with DSP
+Membrane-impermeable, allowing for cell surface labeling
+Disclaimer
+This product is sensitive to moisture. The vial is packaged in a resealable bag with a desiccant to reduce exposure to moisture. After cold storage, equilibrate the vial to room temperature before opening to reduce condensation inside the vial. Make fresh solutions. Storage of stock solutions is not recommended. After use, return the vial to the resealable bag. Close the bag and store the product at the recommended temperature.
+유사한 품목 비교
+전체 비교 보기
+ 차이점 표시
+1 of 1
+이 품목
+D3669
+803316
+803650
+Sigma-Aldrich
+803200
+DTSSP (3,3′-dithiobis(sulfosuccinimidyl propionate))
+빠른 보기
+Sigma-Aldrich
+D3669
+3,3′-Dithiodipropionic acid di(N-hydroxysuccinimide ester)
+빠른 보기
+Sigma-Aldrich
+803316
+Sulfo-LC-SPDP (sulfosuccinimidyl 6-[3′-(2-pyridyldithio)propionamido]hexanoate)
+빠른 보기
+Sigma-Aldrich
+803650
+SBAP (succinimidyl 3-(bromoacetamido)propionate)
+빠른 보기
+description
+-
+description
+powder
+description
+-
+description
+-
+storage condition
+desiccated
+storage condition
+-
+storage condition
+desiccated
+storage condition
+desiccated
+form
+powder
+form
+powder
+form
+powder
+form
+powder
+reaction suitability
+reagent type: cross-linking reagent
+reaction suitability
+reagent type: cross-linking reagent
+reaction suitability
+reagent type: cross-linking reagent
+reaction suitability
+reagent type: cross-linking reagent
+Quality Level
+100
+Quality Level
+200
+Quality Level
+100
+Quality Level
+100
+storage temp.
+2-8°C
+storage temp.
+−20°C
+storage temp.
+−20°C
+storage temp.
+2-8°C
+shipped in
+ambient
+shipped in
+-
+shipped in
+ambient
+shipped in
+ambient
+안전성 정보
+저장 등급
+11 - Combustible Solids
+wgk
+WGK 3
+flash_point_f
+Not applicable
+flash_point_c
+Not applicable
+문서
+성적서(COA)
+원산지 증명서(COO)
+SDS
+Specification Sheet
+가장 최신 버전 중 하나를 선택하세요:
+시험 성적서(COA)
+Lot/Batch Number
+SA247289
+WI338243
+WD329311
+RB232851
+적합한 버전을 찾을 수 없으신가요?
+특정 버전이 필요한 경우 로트 번호나 배치 번호로 특정 인증서를 찾을 수 있습니다.
+COA 검색
+이 제품을 이미 가지고 계십니까?
+문서 라이브러리에서 최근에 구매한 제품에 대한 문서를 찾아보세요.
+문서 라이브러리 방문
+ 
+ 
+ 
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+질문
+ 
+ 
+ 
+ 
+  최초 질문자가 되어 보십시오. 
+ 
+ 
+
+
+ 
+ 
+ 
+
+
+ 
+ 
+ 
+ 
+ 
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+후기
+ 
+ 
+ 
+ 
+ 
+ 
+ ★★★★★ 
+ 
+평점 값 없음
+ 
+ 
+  이 제품의 최초 평가자가 되어 보십시오.  
+. 이 작업으로 모달 대화 상자가 열립니다.
+ 
+ 
+ 
+
+
+
+
+ 
+
+
+ 
+ 
+ 
+ ▼ 
+ 
+평점
+ 
+필터링 기준 평점
+ 
+ 
+ 
+ 필터링 기준 평점 
+ 
+ 
+ 별 1개 
+ 
+ 별 2개 
+ 
+ 별 3개 
+ 
+ 별 4개 
+ 
+ 별 5개 
+ 
+ 
+
+
+ 
+
+
+ 
+ 
+ 
+ ▼ 
+ 
+장소
+ 
+필터링 기준 장소
+ 
+ 
+ 
+ 필터링 기준 장소 
+ 
+ 
+ sq 
+ 
+ العربية 
+ 
+ հայերեն 
+ 
+ Euskara 
+ 
+ Беларуская мова 
+ 
+ босански 
+ 
+ Български език 
+ 
+ Català 
+ 
+ 中文 
+ 
+ Hrvatski jezik 
+ 
+ Čeština 
+ 
+ Dansk 
+ 
+ Nederlands 
+ 
+ English 
+ 
+ Eesti 
+ 
+ Suomi 
+ 
+ Français 
+ 
+ ქართული 
+ 
+ Deutsch 
+ 
+ Ελληνικά 
+ 
+ עברית 
+ 
+ Magyar 
+ 
+ Íslenska 
+ 
+ Indonesian 
+ 
+ Italiano 
+ 
+ 日本語 
+ 
+ Қазақ тілі 
+ 
+ 한국어 
+ 
+ Кыргызча 
+ 
+ Latviešu valoda 
+ 
+ Lietuvių kalba 
+ 
+ mk 
+ 
+ هاس ملايو‎ 
+ 
+ Монгол хэл 
+ 
+ Norsk 
+ 
+ Język polski 
+ 
+ Português 
+ 
+ Limba română 
+ 
+ Русский 
+ 
+ Cрпски језик 
+ 
+ Slovenčina 
+ 
+ Slovenski jezik 
+ 
+ Español 
+ 
+ Svenska 
+ 
+ ไทย 
+ 
+ Türkçe 
+ 
+ Українська мова 
+ 
+ Việt Nam 
+ 
+ 한국어 (대한민국) 
+ 
+ 
+
+
+ 
+
+
+ 
+
+
+활성 필터
+ 
+ 
+ 
+ 
+활성 필터 별 1개
+ 
+필터 제거 
+ 별 1개 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 별 2개
+ 
+필터 제거 
+ 별 2개 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 별 3개
+ 
+필터 제거 
+ 별 3개 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 별 4개
+ 
+필터 제거 
+ 별 4개 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 별 5개
+ 
+필터 제거 
+ 별 5개 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 sq
+ 
+필터 제거 
+ sq 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 العربية
+ 
+필터 제거 
+ العربية 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 հայերեն
+ 
+필터 제거 
+ հայերեն 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Euskara
+ 
+필터 제거 
+ Euskara 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Беларуская мова
+ 
+필터 제거 
+ Беларуская мова 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 босански
+ 
+필터 제거 
+ босански 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Български език
+ 
+필터 제거 
+ Български език 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Català
+ 
+필터 제거 
+ Català 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 中文
+ 
+필터 제거 
+ 中文 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Hrvatski jezik
+ 
+필터 제거 
+ Hrvatski jezik 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Čeština
+ 
+필터 제거 
+ Čeština 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Dansk
+ 
+필터 제거 
+ Dansk 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Nederlands
+ 
+필터 제거 
+ Nederlands 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 English
+ 
+필터 제거 
+ English 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Eesti
+ 
+필터 제거 
+ Eesti 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Suomi
+ 
+필터 제거 
+ Suomi 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Français
+ 
+필터 제거 
+ Français 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 ქართული
+ 
+필터 제거 
+ ქართული 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Deutsch
+ 
+필터 제거 
+ Deutsch 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Ελληνικά
+ 
+필터 제거 
+ Ελληνικά 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 עברית
+ 
+필터 제거 
+ עברית 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Magyar
+ 
+필터 제거 
+ Magyar 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Íslenska
+ 
+필터 제거 
+ Íslenska 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Indonesian
+ 
+필터 제거 
+ Indonesian 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Italiano
+ 
+필터 제거 
+ Italiano 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 日本語
+ 
+필터 제거 
+ 日本語 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Қазақ тілі
+ 
+필터 제거 
+ Қазақ тілі 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 한국어
+ 
+필터 제거 
+ 한국어 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Кыргызча
+ 
+필터 제거 
+ Кыргызча 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Latviešu valoda
+ 
+필터 제거 
+ Latviešu valoda 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Lietuvių kalba
+ 
+필터 제거 
+ Lietuvių kalba 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 mk
+ 
+필터 제거 
+ mk 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 هاس ملايو‎
+ 
+필터 제거 
+ هاس ملايو‎ 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Монгол хэл
+ 
+필터 제거 
+ Монгол хэл 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Norsk
+ 
+필터 제거 
+ Norsk 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Język polski
+ 
+필터 제거 
+ Język polski 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Português
+ 
+필터 제거 
+ Português 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Limba română
+ 
+필터 제거 
+ Limba română 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Русский
+ 
+필터 제거 
+ Русский 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Cрпски језик
+ 
+필터 제거 
+ Cрпски језик 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Slovenčina
+ 
+필터 제거 
+ Slovenčina 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Slovenski jezik
+ 
+필터 제거 
+ Slovenski jezik 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Español
+ 
+필터 제거 
+ Español 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Svenska
+ 
+필터 제거 
+ Svenska 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 ไทย
+ 
+필터 제거 
+ ไทย 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Türkçe
+ 
+필터 제거 
+ Türkçe 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Українська мова
+ 
+필터 제거 
+ Українська мова 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 Việt Nam
+ 
+필터 제거 
+ Việt Nam 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+활성 필터 한국어 (대한민국)
+ 
+필터 제거 
+ 한국어 (대한민국) 
+ ✘ 
+ 
+ 
+ 
+ 
+ 
+모두 지우기
+ 
+ ✘ 
+ 
+모든 필터 지우기
+ 
+ 
+ 
+
+
+
+
+ 
+
+
+ 
+ 
+
+
+ 
+ 
+상부
+쿠키 면책 조항
+가장 관련성 높은 경험을 제공하기 위해 웹사이트에서 쿠키를 사용합니다. 사이트를 클릭하거나 탐색함으로써 귀하는 당사의 쿠키 정책/개인정보 보호정책에 따라 당사의 모든 쿠키 사용에 동의하게 됩니다. 쿠키 설정에서 허용할 범주를 자유롭게 결정할 수 있습니다. 선택한 항목에 따라 웹사이트의 전체 기능을 더 이상 사용하지 못할 수 있습니다. 귀하는 언제든지 선택 사항을 검토하고 변경할 수 있습니다. 더 자세한 정보는 우리의
+
+개인 정보 정책.
+쿠키 설정
+모든 쿠키 허용
+쿠키 기본 설정
+필요한
+기능
+타겟팅
+쿠키 기본 설정
+귀하가 당사 웹사이트를 방문할 때 당사는 정보를 수집하기 위해 귀하의 브라우저에 쿠키를 저장합니다. 수집된 정보는 귀하, 귀하의 기본 설정 또는 귀하의 장치와 관련될 수 있으며 귀하가 예상한 대로 사이트가 작동하도록 하고 보다 개인화된 웹 경험을 제공하는 데 주로 사용됩니다. 그러나 특정 유형의 쿠키를 허용하지 않도록 선택할 수 있으며, 이는 사이트 및 당사가 제공할 수 있는 서비스 경험에 영향을 미칠 수 있습니다. 다른 카테고리 제목을 클릭하여 더 자세히 알아보고 기본 설정을 기본 설정으로 변경하십시오. 당사 웹사이트의 적절한 기능(예: 쿠키 배너 표시 및 설정 기억, 계정 로그인, 로그인 시 리디렉션)을 보장하기 위해 배포되는 당사의 필수 쿠키는 선택 해제할 수 없습니다. 아웃 등). 당사가 귀하의 데이터를 사용하고 공유하는 방법에 대한 자세한 내용은 이 링크를 따르십시오.
+
+            
+개인 정보 보호 정책
+필요한
+항상 활성화
+이 쿠키들은 저희 서비스의 기능을 제공하고 웹사이트가 운영되기 위해 필요합니다. 저희는 귀하의 행동에 따라 요구되는 쿠키를 설정하며, 귀하의 웹사이트 접근 및 상호작용 및 요청된 특정 서비스에 따라 다릅니다.
+기능
+ 
+ 
+기능
+ 
+이 쿠키들은 고급 기능을 제공할 수 있게 하며, 웹사이트에서 개인화된 브라우징 경험을 제공하는 데 사용됩니다. 저희는 귀하의 행동에 따라 쿠키를 설정하며, 귀하의 웹사이트와의 상호작용과 귀하가 선택한 특정 요청 또는 선호 설정에 따라 달라집니다.
+타겟팅
+ 
+ 
+타겟팅
+ 
+이 쿠키들은 웹사이트와의 상호작용을 통해 귀하의 관심사를 더 많이 알 수 있도록 설정될 수 있으며, 더 나은 웹사이트 성능과 경험을 제공하기 위해 분석될 뿐만 아니라 광고 활동을 강화하는 데도 사용됩니다. 저희는 귀하의 브라우저 및/또는 기기를 고유하게 식별하는 방식으로 작동하는 이 쿠키 사용을 지원하기 위해 서비스 제공업체를 이용할 수 있습니다. 이 쿠키들을 통합함으로써, 귀하의 관심사와 서핑 행동을 더 잘 파악하여 광고를 보다 효과적이고 관련성 높은 방식으로 전달하고자 합니다.
+Back Button
+쿠키 목록
+ 
+Filter Button
+Consent
+ 
+Leg.Interest
+ 
+checkbox label
+ 
+label
+ 
+checkbox label
+ 
+label
+ 
+checkbox label
+ 
+label
+Clear
+ 
+checkbox label
+ 
+label
+Apply
+ 
+Cancel
+내 선택 확인
+모두 허용
+ 
+2026-08-04T01:02+09:00
+ 
+bvseo_fps, prod_bvrr, vn_firebird_3.1.50
+ 
+cp_1, bvpage1
+ 
+loc_ko_KR, 803200ALDRICH, prd, sort_relevancy
+ 
+co_noreviews, co_noquestions, tv_0, tr_0
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+피드백
+

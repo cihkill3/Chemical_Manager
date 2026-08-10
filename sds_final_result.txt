@@ -1,0 +1,44 @@
+﻿============================================================
+TCI SDS 다운로드 테스트
+============================================================
+  TCI [C0119] URL: https://www.tcichemicals.com/KR/en/sds/C0119.pdf
+    Status: 403, CT: text/html
+  TCI [C0119] URL: https://www.tcichemicals.com/US/en/sds/C0119.pdf
+    Status: 403, CT: text/html
+  TCI [C0119] URL: https://www.tcichemicals.com/KR/en/p/C0119
+    Status: 403, CT: text/html
+결과: 실패
+
+  TCI [T0751] URL: https://www.tcichemicals.com/KR/en/sds/T0751.pdf
+    Status: 403, CT: text/html
+  TCI [T0751] URL: https://www.tcichemicals.com/US/en/sds/T0751.pdf
+    Status: 403, CT: text/html
+  TCI [T0751] URL: https://www.tcichemicals.com/KR/en/p/T0751
+    Status: 403, CT: text/html
+결과: 실패
+
+
+============================================================
+Thermo Fisher SDS URL 심층 탐색
+============================================================
+  TF document 링크 (2개): ['/apac/document-search', '/content/chemicalssite/kr/ko/home/support/contact-us.html#documents']
+  TF JS SDS 링크 (0개): []
+  TF assets 링크 발견: https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L09319&amp;sku=L09319.MD&amp;erp_type=KR_E1_LCD&amp;countryCode=kr
+  TF document 링크 (2개): ['/apac/document-search', '/content/chemicalssite/kr/ko/home/support/contact-us.html#documents']
+  TF JS SDS 링크 (0개): []
+
+  TF SDS 버튼/링크 (0개):
+
+  PDF URL: https://assets.thermofisher.com/chem-specs-pdf/retrievePdf?rootSku=L09319&amp;sku=L09319.MD&amp;erp_type=KR_E1_LCD&amp;countryCode=kr
+결과: 실패
+
+
+============================================================
+Sigma-Aldrich CDP 네트워크 감시
+============================================================
+  Aldrich CDP 모드로 로딩: https://www.sigmaaldrich.com/KR/ko/sds/aldrich/803200
+  SDS 관련 리소스: []
+  JS PDF 변수: []
+  JSON PDF URL: []
+결과: 실패
+

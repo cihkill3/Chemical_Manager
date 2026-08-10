@@ -1,0 +1,6 @@
+﻿  [C0119] 페이지 로드 중...
+  폼 요소들:
+    brand: TCI
+    prod: C0119
+    lang: ko
+    buttons: [{'class': '', 'id': '', 'text': 'SDS'}, {'class': 'mt20 plr25 darkBlue btn font13 white fontWg600 btnProduct ViewDocument', 'id': 'sdsSearchButton', 'text': 'Search'}, {'class': '', 'id': 'sdsProductCodeLink', 'text': 'Contact Us'}, {'class': '', 'id': 'sdsProductCodeLink', 'text': 'Contact Us'}, {'class': '', 'id': 'sdsProductCodeLink', 'text': 'Contact Us'}, {'class': '', 'id': 'sdsProductCodeLink', 'text': 'Contact Us'}]

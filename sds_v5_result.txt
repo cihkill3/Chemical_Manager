@@ -1,0 +1,42 @@
+﻿============================================================
+Aldrich - 비동기 XHR PDF 다운로드
+============================================================
+  [803200] 비동기 XHR로 PDF 획득 시도
+  결과: {'data': [37, 80, 68, 70, 45, 49, 46, 53, 13, 10, 37, 181, 181, 181, 181, 13, 10, 49, 32, 48, 32, 111, 98, 106, 13, 10, 60, 60, 47, 84, 121, 112, 101, 47, 67, 97, 116, 97, 108, 111, 103, 47, 80, 97, 1
+  PDF 크기: 173400
+  PDF 내용 (첫 200자):  
+ 
+Aldrich - 803200  Page 1  of  7 
+ 
+The life science business of Merck operates as MilliporeSigma in the US and 
+Canada  
+  
+ 
+  
+ 
+ 
+SAFETY DATA SHEET  Version  6.6 
+Revision Date  2025.06.03  
+Pr
+  저장: C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\sds_downloads\SDS_Aldrich_aldrich_803200.pdf
+결과: C:\Users\Jeonghun Lee\.gemini\antigravity\scratch\chemical manager\sds_downloads\SDS_Aldrich_aldrich_803200.pdf
+
+
+============================================================
+TCI - 네트워크 감시 SDS URL 포착
+============================================================
+  [C0119] 포착된 URL: []
+  문서 섹션 HTML: <div class="row pdp">
+            <span id="input.productNum.placeholder.TCI" class="hidden">
+                Enter TCI Product Number</span>
+                <span id="input.productNum.placeholder.KISHIDA" class="hidden">
+                Enter KISHIDA Product Number</span>
+                <span id="input.lotNum.placeholder.TCI" class="hidden">
+                4-5 alphanumeric characters before the hyphen</span>
+                <span id="input.lotNum.placeholder.KISHIDA" class="hidden">
+         
+  SDS 버튼들: [{'href': 'https://www.tcichemicals.com/KR/en/p/C0119#docomentsSectionPDP', 'id': '', 'tag': 'A', 'text': 'sds'}]
+  클릭 후 포착된 URL: []
+  Performance API PDF: ['https://www.tcichemicals.com/_ui/responsive/common/js/documentSearch.js?92a8199f54943294ae2c9912068c432d']
+결과: 실패
+
