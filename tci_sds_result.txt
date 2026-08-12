@@ -1,9 +1,0 @@
-﻿TCI SDS URL 탐색
-============================================================
-  [C0119] 모든 요청 (7개):
-  Performance 리소스: [{'size': 5646, 'type': 'script', 'url': 'https://www.tcichemicals.com/_ui/responsive/common/js/documentSearch.js?92a8199f54943294ae2c9912068c432d'}]
-  인라인 스크립트: []
-
-  [T0751] 모든 요청 (7개):
-  Performance 리소스: [{'size': 5646, 'type': 'script', 'url': 'https://www.tcichemicals.com/_ui/responsive/common/js/documentSearch.js?92a8199f54943294ae2c9912068c432d'}]
-  인라인 스크립트: []

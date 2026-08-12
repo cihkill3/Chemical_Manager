@@ -1,6 +1,0 @@
-﻿[C0119] 접속 중...
-Direct $.post 결과: success
-Content-Disposition: attachment;filename=C0119_KR_KO.pdf
-Data URL length: 486228
-PDF Size: 364650 bytes
-저장 성공: SDS_TCI_C0119.pdf

@@ -1,9 +1,0 @@
-﻿  로딩: https://www.sigmaaldrich.com/KR/ko/sds/aldrich/803200
-  페이지 정보: {'scriptUrls': [], 'sw': 'exists'}
-  HTML 내 PDF/SDS URL: []
-  Shadow DOM 다운로드 버튼: None
-  https://www.sigmaaldrich.com/US/en/sds/aldrich/803200
-    -> 현재 URL: https://www.sigmaaldrich.com/KR/en/sds/aldrich/803200?userType=undefined, Content-Type: application/pdf
-  https://www.sigmaaldrich.com/KR/en/sds/aldrich/803200
-    -> 현재 URL: https://www.sigmaaldrich.com/KR/en/sds/aldrich/803200, Content-Type: application/pdf
-결과: 실패

@@ -12,8 +12,7 @@
         "CAS 번호",
         "품번",
         "용량",
-        "수량",
-        "보관온도"
+        "수량"
     ],
     "target_headers": [
         "Order No.",
@@ -42,7 +41,7 @@
         "CAS No.": "CAS 번호",
         "Catalog No.": "품번",
         "Room": "",
-        "Storage Temp.": "보관온도",
+        "Storage Temp.": "",
         "Cabinet": "",
         "Quantity": "수량",
         "Used": "",
@@ -63,9 +62,16 @@
         "normal_bg": "#ffffff",
         "normal_font": "#000000",
         "header_bg": "#d9d9d9",
-        "header_font": "#000000"
+        "header_font": "#000000",
+        "status_x_font": "#ff0000",
+        "status_x_bg": "#ffff00",
+        "search_failed_bg": "#ffff00",
+        "search_failed_font": "#ff0000",
+        "manual_input_bg": "#ffff00",
+        "manual_input_font": "#ff0000"
     },
     "sync_interval_minutes": 0,
     "watch_enabled": false,
-    "run_on_startup": false
+    "run_on_startup": false,
+    "headless": true
 }

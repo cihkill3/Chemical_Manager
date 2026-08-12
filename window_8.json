@@ -1,3 +1,0 @@
-{account:window.digitalData.widgets.userway.account},window.utilities.loadScript("https://cdn.userway.org/widgetapp/"+window.digitalData.widgets.userway.version);
-});</script><script>_satellite["_runScript3"](function(event, target, Promise) {
-var kampyleEnabled=document.querySelector(".globalHeader")&&-1===document.location.href.indexOf("/account-center");kampyleEnabled&&"1"!=_satellite.cookie.get("k_disable")&&(document.addEventListener("kampyleLoaded",(function(){var e={en:"givefeedback-en.jpg",pt:"givefeedback-pt.jpg",es:"givefeedback-es.jpg",fr:"givefeedback-fr.jpg",de:"givefeedback-de.jpg",ru:"givefeedback-ru.jpg",ja:"givefeedback-ja.jpg",zh:"givefeedback-zh.jpg",zt:"givefeedback-zt.jpg",ko:"givefeedback-ko.jpg",ar:"givefeedback-ar.jpg"}

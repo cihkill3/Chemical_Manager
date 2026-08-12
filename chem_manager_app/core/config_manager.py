@@ -54,7 +54,13 @@ DEFAULT_CONFIG = {
         "normal_bg": "#ffffff",
         "normal_font": "#000000",
         "header_bg": "#d9d9d9",
-        "header_font": "#000000"
+        "header_font": "#000000",
+        "search_failed_bg": "#ffff00",
+        "search_failed_font": "#ff0000",
+        "manual_input_bg": "#ffff00",
+        "manual_input_font": "#ff0000",
+        "status_x_bg": "#ffe6e6",
+        "status_x_font": "#ff0000"
     },
     "sync_interval_minutes": 0,
     "watch_enabled": False,

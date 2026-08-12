@@ -124,16 +124,29 @@ class PDFExporter:
                     if status_val.upper() == "X":
                         continue
                 
+                def clean_num_str(val):
+                    if val is None: return "Unknown"
+                    if isinstance(val, float) and val.is_integer():
+                        return str(int(val))
+                    s = str(val).strip()
+                    if s.endswith(".0"):
+                        try:
+                            f_v = float(s)
+                            if f_v.is_integer():
+                                return str(int(f_v))
+                        except: pass
+                    return s if s else "Unknown"
+
                 # Extract group key
                 if mode == 1:
-                    r_val = str(row[room_col - 1]).strip() if room_col > 0 and row[room_col - 1] is not None else "Unknown"
+                    r_val = clean_num_str(row[room_col - 1]) if room_col > 0 else "Unknown"
                     key = r_val
                     title_str = f"Chemical List in Room {r_val}"
                     sheet_name = f"Room_{r_val}"[:31] # Excel sheet name max 31 chars
                 else:
-                    r_val = str(row[room_col - 1]).strip() if room_col > 0 and row[room_col - 1] is not None else "Unknown"
-                    t_val = str(row[temp_col - 1]).strip() if temp_col > 0 and row[temp_col - 1] is not None else "Unknown"
-                    c_val = str(row[cab_col - 1]).strip() if cab_col > 0 and row[cab_col - 1] is not None else "Unknown"
+                    r_val = clean_num_str(row[room_col - 1]) if room_col > 0 else "Unknown"
+                    t_val = clean_num_str(row[temp_col - 1]) if temp_col > 0 else "Unknown"
+                    c_val = clean_num_str(row[cab_col - 1]) if cab_col > 0 else "Unknown"
                     
                     import re
                     c_base = re.sub(r'\d+$', '', c_val).strip()
@@ -240,3 +253,86 @@ class PDFExporter:
             if excel:
                 try: excel.Quit()
                 except: pass
+
+    def export_sds_batch(self, db_path, start_date_str, output_path):
+        """
+        PyMuPDF(fitz)를 사용하여 DB 시트의 특정 날짜 이후 갱신된 제품들의 로컬 SDS 파일(SDS_Local_Path)을 병합합니다.
+        start_date_str: 'YYYY-MM-DD' 형식의 문자열
+        output_path: 저장할 병합된 PDF 파일 경로
+        """
+        import datetime
+        import pymupdf as fitz
+        import pandas as pd
+        import urllib.parse
+        
+        self.log(f"SDS 일괄 병합 시작 (기준일: {start_date_str})")
+        
+        try:
+            start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            return {"success": False, "error": "날짜 형식이 올바르지 않습니다 (YYYY-MM-DD 이어야 함)."}
+            
+        if not os.path.exists(db_path):
+            return {"success": False, "error": "DB(ChemicalList) 파일을 찾을 수 없습니다."}
+            
+        try:
+            df = pd.read_excel(db_path, sheet_name="DB")
+        except Exception as e:
+            return {"success": False, "error": f"DB 시트 읽기 실패: {e}"}
+            
+        rev_col = "Revision Date" if "Revision Date" in df.columns else ("갱신일" if "갱신일" in df.columns else None)
+        path_col = "SDS_Local_Path" if "SDS_Local_Path" in df.columns else None
+        
+        if not rev_col or not path_col:
+            return {"success": False, "error": "DB 시트에 'Revision Date' 또는 'SDS_Local_Path' 열이 없습니다."}
+            
+        valid_pdfs = []
+        for index, row in df.iterrows():
+            updated_str = str(row.get(rev_col, "")).strip()
+            local_path = str(row.get(path_col, "")).strip()
+            
+            if not updated_str or updated_str in ["nan", "None", "-"] or not local_path or local_path in ["nan", "None", "-"]:
+                continue
+                
+            try:
+                # 갱신일 파싱 (예: "2026-08-01 14:22:11" 또는 "2026-08-01")
+                row_date = datetime.datetime.strptime(updated_str.split()[0], "%Y-%m-%d").date()
+                if row_date >= start_date:
+                    if os.path.isabs(local_path) and os.path.exists(local_path):
+                        valid_pdfs.append(local_path)
+                    else:
+                        db_folder = os.path.dirname(os.path.abspath(db_path))
+                        clean_rel = local_path.replace(".\\", "").replace("./", "").replace("/", "\\")
+                        alt_path = os.path.abspath(os.path.join(db_folder, clean_rel))
+                        if os.path.exists(alt_path):
+                            valid_pdfs.append(alt_path)
+                        elif os.path.exists(local_path):
+                            valid_pdfs.append(os.path.abspath(local_path))
+                        else:
+                            self.log(f"파일을 찾을 수 없음: {local_path}")
+            except Exception as e:
+                self.log(f"날짜 처리 중 오류 (행 {index}): {e}")
+                
+        if not valid_pdfs:
+            self.log(f"{start_date_str} 이후에 갱신되고 로컬 SDS가 존재하는 항목이 없습니다.")
+            return {"success": False, "error": "조건을 만족하는 SDS 파일이 없습니다."}
+            
+        self.log(f"총 {len(valid_pdfs)}개의 PDF 병합을 시작합니다...")
+        
+        try:
+            merged_pdf = fitz.open()
+            for pdf_file in valid_pdfs:
+                self.log(f"병합 중: {os.path.basename(pdf_file)}")
+                try:
+                    with fitz.open(pdf_file) as pdf:
+                        merged_pdf.insert_pdf(pdf)
+                except Exception as e:
+                    self.log(f"PDF 병합 중 오류 ({os.path.basename(pdf_file)}): {e}")
+            
+            merged_pdf.save(output_path)
+            merged_pdf.close()
+            self.log(f"SDS 병합 완료: {output_path}")
+            return {"success": True, "path": output_path}
+            
+        except Exception as e:
+            return {"success": False, "error": f"PDF 병합 중 치명적 오류: {e}"}

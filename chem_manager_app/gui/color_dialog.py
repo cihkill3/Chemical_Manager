@@ -20,7 +20,10 @@ class ColorDialog(QDialog):
             ("품번 없음 (경고)", "warn_num_bg", "warn_num_font"),
             ("위치/온도 정보 없음", "warn_loc_bg", "warn_loc_font"),
             ("일반 항목", "normal_bg", "normal_font"),
-            ("헤더 스타일", "header_bg", "header_font")
+            ("헤더 스타일", "header_bg", "header_font"),
+            ("잔량 부족 (Status 'X')", "status_x_bg", "status_x_font"),
+            ("검색 실패 (Search Failed)", "search_failed_bg", "search_failed_font"),
+            ("수동 입력 필요 (Manual Input Required)", "manual_input_bg", "manual_input_font")
         ]
         
         self.init_ui()
@@ -74,7 +77,8 @@ class ColorDialog(QDialog):
 
     def choose_color(self, bg_key, fg_key, is_bg):
         key = bg_key if is_bg else fg_key
-        current_hex = self.colors.get(key, "#ffffff" if is_bg else "#000000")
+        def_hex = "#ffff00" if (is_bg and ("failed" in key or "manual" in key or "status_x" in key)) else ("#ff0000" if (not is_bg and ("failed" in key or "manual" in key or "status_x" in key)) else ("#ffffff" if is_bg else "#000000"))
+        current_hex = self.colors.get(key, def_hex)
         
         color = QColorDialog.getColor(QColor(current_hex), self, "색상 선택")
         if color.isValid():
@@ -85,8 +89,10 @@ class ColorDialog(QDialog):
         preview = self.preview_labels.get(bg_key)
         if not preview: return
         
-        bg_hex = self.colors.get(bg_key, "#ffffff")
-        fg_hex = self.colors.get(fg_key, "#000000")
+        def_bg = "#ffff00" if ("failed" in bg_key or "manual" in bg_key or "status_x" in bg_key) else "#ffffff"
+        def_fg = "#ff0000" if ("failed" in fg_key or "manual" in fg_key or "status_x" in fg_key) else "#000000"
+        bg_hex = self.colors.get(bg_key, def_bg)
+        fg_hex = self.colors.get(fg_key, def_fg)
         
         style = f"background-color: {bg_hex}; color: {fg_hex}; border: 1px solid #ccc;"
         preview.setStyleSheet(style)
