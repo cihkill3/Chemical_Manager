@@ -2,11 +2,14 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QColorDialog, QGroupBox, QGridLayout)
 from PyQt6.QtGui import QColor, QPalette
 
+from gui.styles import MODERN_STYLE
+
 class ColorDialog(QDialog):
     def __init__(self, config_data, parent=None):
         super().__init__(parent)
         self.setWindowTitle("색상 범례 설정")
         self.resize(500, 400)
+        self.setStyleSheet(MODERN_STYLE)
         
         self.config = config_data.copy()
         if "colors" not in self.config:
@@ -15,12 +18,10 @@ class ColorDialog(QDialog):
         self.colors = self.config["colors"]
         
         self.color_map = [
-            ("원본 시트 완료 (Source)", "done_bg", "done_font"),
             ("CAS 번호 없음 (경고)", "warn_cas_bg", "warn_cas_font"),
             ("품번 없음 (경고)", "warn_num_bg", "warn_num_font"),
             ("위치/온도 정보 없음", "warn_loc_bg", "warn_loc_font"),
             ("일반 항목", "normal_bg", "normal_font"),
-            ("헤더 스타일", "header_bg", "header_font"),
             ("잔량 부족 (Status 'X')", "status_x_bg", "status_x_font"),
             ("검색 실패 (Search Failed)", "search_failed_bg", "search_failed_font"),
             ("수동 입력 필요 (Manual Input Required)", "manual_input_bg", "manual_input_font")

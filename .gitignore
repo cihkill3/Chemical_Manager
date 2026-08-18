@@ -1,6 +1,13 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+scratch/
+chem_manager_app/downloaded_files/*.crdownload
+chem_manager_app/logs/
+chem_manager_app/dist/
+test_*.xlsx
+*.pyc
+.pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .venv/
@@ -18,3 +25,4 @@ outputs/
 *.tmp
 *.log
 ~*.*
+release/

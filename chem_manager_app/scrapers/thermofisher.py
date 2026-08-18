@@ -4,6 +4,20 @@ from scrapers.base_scraper import BaseScraper
 from core.db_manager import DBManager
 
 class ThermofisherScraper(BaseScraper):
+    coa_vendor = "ThermoFisher"
+
+    @staticmethod
+    def _valid_product_page(name, page_source, product_number):
+        """Reject asset/error pages that happen to expose an h1 element."""
+        clean_name = " ".join(str(name or "").split())
+        source = str(page_source or "")
+        bad_markers = ("@charset", "header.min.css", "body.overflow-hidden", "/* hash:")
+        return (
+            2 <= len(clean_name) <= 300
+            and not any(marker in clean_name.casefold() for marker in bad_markers)
+            and product_number.casefold() in source.casefold()
+        )
+
     def scrape(self, product_number):
         url = f"https://chemicals.thermofisher.kr/apac/product/{product_number}"
         
@@ -14,13 +28,20 @@ class ThermofisherScraper(BaseScraper):
         }
         
         try:
+            # The global catalog is canonical for life-science catalog numbers.
+            # The chemicals host can return CSS/asset content with HTTP 200 for
+            # guessed suffixes, so it is fallback-only and strictly validated.
+            candidate_urls = [f"https://www.thermofisher.com/order/catalog/product/{product_number}"]
             suffixes = ["", ".MD", ".06", ".14", ".36", ".18", ".22", ".03"]
+            candidate_urls.extend(
+                f"https://chemicals.thermofisher.kr/apac/product/{product_number}{suffix}"
+                for suffix in suffixes
+            )
             found = False
-            for suffix in suffixes:
-                current_url = f"https://chemicals.thermofisher.kr/apac/product/{product_number}{suffix}"
+            for current_url in candidate_urls:
                 try:
                     self.context.get(current_url)
-                    self.context.sleep(2)
+                    self.wait_for_page(timeout=2, selector="h1")
                 except Exception as e:
                     print(f"    Timeout or error on {current_url}: {e}")
                     continue
@@ -31,29 +52,12 @@ class ThermofisherScraper(BaseScraper):
                     
                 try:
                     name = self.context.get_text("h1").strip()
-                    if name:
+                    page_source = self.context.get_page_source()
+                    if self._valid_product_page(name, page_source, product_number):
                         result["Product Name"] = name
                         result["Detail_Link"] = current_url
                         found = True
                         break
-                except:
-                    pass
-            
-            if not found:
-                # Fallback to global thermofisher.com
-                global_url = f"https://www.thermofisher.com/order/catalog/product/{product_number}"
-                try:
-                    self.context.get(global_url)
-                    self.context.sleep(3)
-                except Exception as e:
-                    print(f"    Timeout or error on global {global_url}: {e}")
-                
-                try:
-                    name = self.context.get_text("h1").strip()
-                    if name:
-                        result["Product Name"] = name
-                        result["Detail_Link"] = global_url
-                        found = True
                 except:
                     pass
             
@@ -124,6 +128,8 @@ class ThermofisherScraper(BaseScraper):
             # --- SDS DOWNLOAD (from old sds_downloader.py) ---
             try:
                 import io
+
+                fresh_path = self.find_fresh_sds("ThermoFisher", product_number)
                 
                 sds_url_found = None
                 child_skus = f"{product_number}.MF,{product_number}.03,{product_number}.MD,{product_number}.06,{product_number}.14,{product_number}"
@@ -135,7 +141,7 @@ class ThermofisherScraper(BaseScraper):
                 for lang in ['ko', 'en']:
                     api_url = f"https://chemicals.thermofisher.kr/apac/api/document/search/sds?childSkus={child_skus}&language={lang}"
                     try:
-                        api_resp = requests.get(api_url, headers=headers, timeout=10)
+                        api_resp = self.http_get(api_url, headers=headers, timeout=10)
                         if api_resp.status_code == 200:
                             data = api_resp.json()
                             pdf_url = data.get("data")
@@ -157,7 +163,7 @@ class ThermofisherScraper(BaseScraper):
                     ]
                     for f_url in fallback_urls:
                         try:
-                            pdf_resp = requests.get(f_url, headers=headers, timeout=10, allow_redirects=True)
+                            pdf_resp = self.http_get(f_url, headers=headers, timeout=10, allow_redirects=True)
                             if pdf_resp.status_code == 200 and 'application/pdf' in pdf_resp.headers.get('content-type', '').lower():
                                 sds_url_found = f_url
                                 break
@@ -166,6 +172,10 @@ class ThermofisherScraper(BaseScraper):
                 
                 if sds_url_found:
                     result["SDS_Link"] = sds_url_found
+                    if fresh_path:
+                        result["SDS_Local_Path"] = fresh_path
+                        print(f"  [TF] Fresh local SDS found; preserving file and verified source URL: {fresh_path}")
+                        return result
                     
                     p_name = result.get("Product Name", result.get("시약명", ""))
                     filename = DBManager.format_sds_filename(p_name, "ThermoFisher", product_number)
@@ -174,7 +184,7 @@ class ThermofisherScraper(BaseScraper):
                     os.makedirs(sds_dir, exist_ok=True)
                     sds_path = os.path.join(sds_dir, f"{filename}.pdf")
                     
-                    pdf_resp = requests.get(sds_url_found, headers=headers, timeout=30, allow_redirects=True)
+                    pdf_resp = self.http_get(sds_url_found, headers=headers, timeout=30, allow_redirects=True)
                     if pdf_resp.status_code == 200:
                         content = pdf_resp.content
                         
@@ -190,11 +200,16 @@ class ThermofisherScraper(BaseScraper):
                             is_valid = True
                             
                         if is_valid:
-                            with open(sds_path, 'wb') as f:
-                                f.write(content)
+                            if DBManager.is_sds_fresh(sds_path, max_days=180):
+                                print(f"  [TF] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
+                            else:
+                                with open(sds_path, 'wb') as f:
+                                    f.write(content)
                             result["SDS_Local_Path"] = sds_path
                 else:
-                    result["SDS_Link"] = f"https://www.thermofisher.com/search/browse/results?term={product_number}"
+                    result["SDS_Link"] = "-"
+                    if fresh_path:
+                        result["SDS_Local_Path"] = fresh_path
             except Exception as e:
                 print(f"  TF SDS Error: {e}")
                 

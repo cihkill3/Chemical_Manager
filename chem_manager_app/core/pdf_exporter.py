@@ -1,6 +1,7 @@
 import os
 import win32com.client
 from utils.excel_utils import get_col_letter
+from core.config_manager import resolve_target_file
 
 class PDFExporter:
     def __init__(self, config_data, callback_progress=None):
@@ -20,35 +21,10 @@ class PDFExporter:
         only_status_o: bool, if True, only include rows where Status == 'O'
         output_path: Absolute path to save the .pdf file
         """
-        import urllib.parse
-        import glob
-        import re
-        src_path_raw = self.config.get("source_file", "")
-        if src_path_raw.startswith("file:///"):
-            src_path_raw = urllib.parse.unquote(src_path_raw[8:])
-        
-        if not src_path_raw:
-            return {"success": False, "error": "원본 파일 경로가 설정되지 않았습니다."}
-            
-        src_folder = os.path.dirname(os.path.abspath(src_path_raw))
-        
-        # Find latest ChemicalList file
-        search_pattern = os.path.join(src_folder, "ChemicalList*.xlsx")
-        all_files = glob.glob(search_pattern)
-        
-        valid_files = []
-        for f in all_files:
-            basename = os.path.basename(f)
-            if basename.startswith("~$"): continue
-            if re.match(r'^ChemicalList(?:_\d{8}_\d{6})?\.xlsx$', basename):
-                valid_files.append(f)
-                
-        if not valid_files:
+        target_path = resolve_target_file(self.config)
+        if not os.path.isfile(target_path):
             return {"success": False, "error": f"동기화된 ChemicalList 파일을 찾을 수 없습니다. 먼저 동기화를 진행해주세요."}
-        
-        valid_files.sort(key=lambda x: os.path.basename(x), reverse=True)
-        target_path = valid_files[0]
-        self.log(f"최신 ChemicalList 파일 읽기: {os.path.basename(target_path)}")
+        self.log(f"선택된 ChemicalList 파일 읽기: {os.path.basename(target_path)}")
 
         excel = None
         source_wb = None

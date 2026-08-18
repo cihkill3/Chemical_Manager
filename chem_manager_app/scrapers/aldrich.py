@@ -5,6 +5,8 @@ from scrapers.base_scraper import BaseScraper
 from core.db_manager import DBManager
 
 class AldrichScraper(BaseScraper):
+    coa_vendor = "Aldrich"
+
     def scrape(self, product_number):
         # Aldrich 제품 번호의 뒤에 -10G 등 패키지 크기가 붙는 경우가 많으므로 제거합니다.
         clean_product_number = product_number.split('-')[0]
@@ -24,10 +26,12 @@ class AldrichScraper(BaseScraper):
         matched_brand = "aldrich"
         
         for brand_path in brands_to_try:
+            if self.is_stopped():
+                break
             url = f"https://www.sigmaaldrich.com/KR/en/product/{brand_path}"
             try:
                 self.context.get(url)
-                self.context.sleep(3)
+                self.wait_for_page(timeout=3, reject_titles=("just a moment", "checking your browser"))
                 
                 title_text = self.context.get_title().lower()
                 
@@ -151,6 +155,12 @@ class AldrichScraper(BaseScraper):
             
             pdf_url = f"https://www.sigmaaldrich.com/KR/ko/sds/{matched_brand}/{clean_product_number}"
             result["SDS_Link"] = pdf_url
+
+            fresh_path = self.find_fresh_sds("Aldrich", clean_product_number)
+            if fresh_path:
+                result["SDS_Local_Path"] = fresh_path
+                print(f"  [Aldrich] Fresh local SDS found; skipping download: {fresh_path}")
+                return result
             
             print(f"  [Aldrich] SDS Fetch from: {pdf_url}")
             
@@ -172,7 +182,7 @@ class AldrichScraper(BaseScraper):
                 .catch(e => done({{error: e.toString()}}));
             """
             
-            res = self.context.execute_async_script(script)
+            res = self.execute_async_script(script)
             
             if res and 'data' in res:
                 content = bytes(res['data'])
@@ -198,10 +208,14 @@ class AldrichScraper(BaseScraper):
                         os.makedirs(sds_dir, exist_ok=True)
                         sds_path = os.path.join(sds_dir, f"{filename}.pdf")
                         
-                        print(f"  [Aldrich] Saving SDS PDF to: {sds_path} (bytes: {len(content)})")
-                        with open(sds_path, 'wb') as f:
-                            f.write(content)
-                        result["SDS_Local_Path"] = sds_path
+                        if DBManager.is_sds_fresh(sds_path, max_days=180):
+                            print(f"  [Aldrich] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
+                            result["SDS_Local_Path"] = sds_path
+                        else:
+                            print(f"  [Aldrich] Saving SDS PDF to: {sds_path} (bytes: {len(content)})")
+                            with open(sds_path, 'wb') as f:
+                                f.write(content)
+                            result["SDS_Local_Path"] = sds_path
                     else:
                         print(f"  [Aldrich] SDS PDF validation failed (len: {len(content)})")
             elif res and 'error' in res:

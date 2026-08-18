@@ -1,5 +1,5 @@
 {
-    "source_file": "C:\\Users\\Jeonghun Lee\\.gemini\\antigravity\\scratch\\chemical manager\\order book.xlsx",
+    "source_file": "C:\\Users\\Jeonghun Lee\\OneDrive\\2026 orderbook\\ChemicalList_Test\\order book_test.xlsx",
     "source_sheet": "2026",
     "header_row": 7,
     "source_headers": [
@@ -12,7 +12,8 @@
         "CAS 번호",
         "품번",
         "용량",
-        "수량"
+        "수량",
+        "Lot No."
     ],
     "target_headers": [
         "Order No.",
@@ -29,7 +30,11 @@
         "Quantity",
         "Used",
         "Status",
-        "Remarks"
+        "Remarks",
+        "Lot No.",
+        "Expiration Date",
+        "COA Link",
+        "COA Local Path"
     ],
     "mapping": {
         "Order No.": "번호",
@@ -46,7 +51,8 @@
         "Quantity": "수량",
         "Used": "",
         "Status": "",
-        "Remarks": ""
+        "Remarks": "",
+        "Lot No.": "Lot No."
     },
     "colors": {
         "done_bg": "#e6f7e6",

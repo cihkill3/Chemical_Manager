@@ -3,5 +3,7 @@ openpyxl
 PyPDF2
 beautifulsoup4
 requests
-playwright
-playwright-stealth
+PyQt6
+pywin32
+seleniumbase
+pymupdf

@@ -6,6 +6,8 @@ from scrapers.base_scraper import BaseScraper
 from core.db_manager import DBManager
 
 class TciScraper(BaseScraper):
+    coa_vendor = "TCI"
+
     def scrape(self, product_number):
         url = f"https://www.tcichemicals.com/KR/en/p/{product_number}"
         
@@ -17,7 +19,7 @@ class TciScraper(BaseScraper):
         
         try:
             self.context.get(url)
-            self.context.sleep(3) # Cloudflare wait
+            self.wait_for_page(timeout=3, reject_titles=("just a moment", "checking your browser"))
             page_title = self.context.get_title()
             if "not found" in page_title.lower() or "error" in page_title.lower() or "access denied" in page_title.lower():
                 return result
@@ -107,6 +109,13 @@ class TciScraper(BaseScraper):
                 os.makedirs(sds_dir, exist_ok=True)
                 sds_path = os.path.join(sds_dir, f"{filename}.pdf")
 
+                fresh_path = self.find_fresh_sds("TCI", product_number)
+                if fresh_path:
+                    result["SDS_Local_Path"] = fresh_path
+                    result["SDS_Link"] = "https://www.tcichemicals.com/KR/en/documentSearch"
+                    print(f"  [TCI] Fresh local SDS found; skipping download: {fresh_path}")
+                    return result
+
                 intercept_and_fetch_js = f"""
                 var done = arguments[arguments.length - 1];
                 var pCode = "{product_number}";
@@ -166,12 +175,12 @@ class TciScraper(BaseScraper):
                 }}, 500);
                 """
 
-                b64_res = self.context.execute_async_script(intercept_and_fetch_js)
+                b64_res = self.execute_async_script(intercept_and_fetch_js)
                 
                 if not b64_res or not isinstance(b64_res, str) or ',' not in b64_res:
                     doc_search_url = "https://www.tcichemicals.com/KR/en/documentSearch"
                     self.context.get(doc_search_url)
-                    self.context.sleep(2)
+                    self.wait_for_page(timeout=2, reject_titles=("just a moment", "checking your browser"))
                     
                     doc_search_js = f"""
                     var done = arguments[arguments.length - 1];
@@ -216,7 +225,7 @@ class TciScraper(BaseScraper):
                         }}
                     }}, 500);
                     """
-                    b64_res = self.context.execute_async_script(doc_search_js)
+                    b64_res = self.execute_async_script(doc_search_js)
 
                 if b64_res and isinstance(b64_res, str) and ',' in b64_res:
                     b64_data = b64_res.split(',')[1]
@@ -234,8 +243,11 @@ class TciScraper(BaseScraper):
                             is_valid = True
 
                     if is_valid:
-                        with open(sds_path, 'wb') as f:
-                            f.write(content)
+                        if DBManager.is_sds_fresh(sds_path, max_days=180):
+                            print(f"  [TCI] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
+                        else:
+                            with open(sds_path, 'wb') as f:
+                                f.write(content)
                         result["SDS_Local_Path"] = sds_path
                         result["SDS_Link"] = "https://www.tcichemicals.com/KR/en/documentSearch"
             except Exception as e:

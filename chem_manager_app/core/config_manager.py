@@ -2,6 +2,7 @@ import json
 import os
 
 import sys
+import copy
 
 def get_app_root():
     if getattr(sys, 'frozen', False):
@@ -12,16 +13,18 @@ CONFIG_FILE = os.path.join(get_app_root(), "config.json")
 
 DEFAULT_CONFIG = {
     "source_file": "",
+    "target_file": "",
     "source_sheet": "",
     "header_row": 1,
     "source_headers": [
         "번호", "날짜", "주문자", "회사", "품목명", 
-        "수령확인", "CAS 번호", "품번", "용량", "수량", "보관온도"
+        "수령확인", "CAS 번호", "품번", "용량", "수량", "보관온도", "Lot No."
     ],
     "target_headers": [
         "Order No.", "Order Date", "Ordered By", "Product Name", 
         "Manufacturer", "Package Size", "CAS No.", "Catalog No.", 
-        "Room", "Storage Temp.", "Cabinet", "Quantity", "Used", "Status", "Remarks"
+        "Room", "Storage Temp.", "Cabinet", "Quantity", "Used", "Status", "Remarks",
+        "Lot No.", "Expiration Date", "COA Link", "COA Local Path"
     ],
     "mapping": {
         "Order No.": "번호",
@@ -38,7 +41,8 @@ DEFAULT_CONFIG = {
         "Quantity": "수량",
         "Used": "",
         "Status": "",
-        "Remarks": ""
+        "Remarks": "",
+        "Lot No.": "Lot No."
     },
     "colors": {
         "done_bg": "#e6f7e6",
@@ -67,10 +71,55 @@ DEFAULT_CONFIG = {
     "run_on_startup": False
 }
 
+def normalize_local_path(value):
+    """Return a normalized local path, including file:/// values."""
+    import urllib.parse
+
+    text = str(value or "").strip()
+    if text.startswith("file:///"):
+        text = urllib.parse.unquote(text[8:])
+    elif text.startswith("file://"):
+        text = urllib.parse.unquote(text[7:])
+    return os.path.abspath(text) if text else ""
+
+
+def resolve_target_file(config):
+    """Resolve the configured ChemicalList workbook with legacy fallback."""
+    configured = normalize_local_path((config or {}).get("target_file", ""))
+    if configured:
+        return configured
+    source = normalize_local_path((config or {}).get("source_file", ""))
+    if source:
+        return os.path.join(os.path.dirname(source), "ChemicalList.xlsx")
+    return os.path.abspath("ChemicalList.xlsx")
+
+
+def validate_chemical_list_file(path):
+    """Validate an existing target workbook without opening it in Excel."""
+    normalized = normalize_local_path(path)
+    if not normalized or not os.path.isfile(normalized):
+        return False, "파일을 찾을 수 없습니다."
+    if not normalized.lower().endswith(".xlsx"):
+        return False, "ChemicalList 파일은 .xlsx 형식이어야 합니다."
+    try:
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(normalized, read_only=True, data_only=False, keep_links=False)
+        try:
+            names = set(workbook.sheetnames)
+        finally:
+            workbook.close()
+    except Exception as error:
+        return False, f"Excel 파일을 읽을 수 없습니다: {error}"
+    missing = [name for name in ("ChemicalList", "DB") if name not in names]
+    if missing:
+        return False, f"필수 시트가 없습니다: {', '.join(missing)}"
+    return True, ""
+
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         save_config(DEFAULT_CONFIG)
-        return DEFAULT_CONFIG.copy()
+        return copy.deepcopy(DEFAULT_CONFIG)
     
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -84,14 +133,20 @@ def load_config():
                     for sub_key, sub_val in val.items():
                         if sub_key not in data[key]:
                             data[key][sub_key] = sub_val
+            if "Lot No." not in data["source_headers"]:
+                data["source_headers"].append("Lot No.")
+            for header in ("Lot No.", "Expiration Date", "COA Link", "COA Local Path"):
+                if header not in data["target_headers"]:
+                    data["target_headers"].append(header)
+            data["mapping"].setdefault("Lot No.", "Lot No.")
             return data
     except Exception as e:
-        print(f"Error loading config: {e}")
-        return DEFAULT_CONFIG.copy()
+        raise OSError(f"설정 파일을 읽을 수 없습니다: {CONFIG_FILE} ({e})") from e
 
 def save_config(config_data):
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(config_data, f, ensure_ascii=False, indent=4)
+        return True
     except Exception as e:
-        print(f"Error saving config: {e}")
+        raise OSError(f"설정 파일을 저장할 수 없습니다: {CONFIG_FILE} ({e})") from e

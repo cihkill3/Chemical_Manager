@@ -8,8 +8,10 @@ from gui.mapping_dialog import MappingDialog
 from gui.color_dialog import ColorDialog
 from gui.pdf_dialog import PdfDialog
 from gui.db_update_dialog import DbUpdateDialog
+from gui.styles import MODERN_STYLE
 from core.sync_engine import SyncEngine
 from core.pdf_exporter import PDFExporter
+from core.config_manager import get_app_root, normalize_local_path, resolve_target_file, validate_chemical_list_file
 
 class PdfWorker(QThread):
     progress = pyqtSignal(str)
@@ -43,12 +45,7 @@ class SdsWorker(QThread):
         
     def run(self):
         try:
-            import urllib.parse
-            src_path_raw = self.config.get("source_file", "")
-            if src_path_raw.startswith("file://"):
-                src_path_raw = urllib.parse.unquote(src_path_raw.replace("file:///", "").replace("file://", ""))
-            src_folder = os.path.dirname(os.path.abspath(src_path_raw))
-            db_path = os.path.join(src_folder, "ChemicalList.xlsx")
+            db_path = resolve_target_file(self.config)
             
             exporter = PDFExporter(self.config, callback_progress=self.progress.emit)
             result = exporter.export_sds_batch(db_path, self.start_date, self.out_path)
@@ -196,32 +193,55 @@ class DbUpdateWorker(QThread):
         super().__init__()
         self.config = config
         self.opts = opts
+        self.has_operation_lock = False
+
+    def release_operation_lock(self):
+        if self.has_operation_lock:
+            from core.concurrency_manager import WORKBOOK_OPERATION_LOCK
+            self.has_operation_lock = False
+            WORKBOOK_OPERATION_LOCK.release()
         
     def run(self):
         try:
-            import os, urllib.parse, datetime
-            src_path_raw = self.config.get("source_file", "")
-            if src_path_raw.startswith("file://"):
-                src_path_raw = urllib.parse.unquote(src_path_raw.replace("file:///", "").replace("file://", ""))
-            src_folder = os.path.dirname(os.path.abspath(src_path_raw))
-            target_path = os.path.join(src_folder, "ChemicalList.xlsx")
+            from core.concurrency_manager import WORKBOOK_OPERATION_LOCK
+            if not WORKBOOK_OPERATION_LOCK.acquire(blocking=False):
+                self.finished.emit({
+                    "success": False,
+                    "error": "다른 동기화 또는 DB 업데이트 작업이 이미 진행 중입니다."
+                })
+                return
+            self.has_operation_lock = True
+            import os, datetime
+            target_path = resolve_target_file(self.config)
             
             from core.db_manager import DBManager
-            from scrapers.thermofisher import ThermofisherScraper
-            from scrapers.tci import TciScraper
-            from scrapers.aldrich import AldrichScraper
-            from scrapers.abcam import AbcamScraper
             import pandas as pd
             
             from seleniumbase import SB
             
+            from core.sync_engine import is_file_locked, check_and_wait_lock
+            import time
+            
+            sync_interval = max(0, int(self.config.get("sync_interval_minutes", 0) or 0))
+            is_auto_sync = sync_interval > 0
+            max_retries = max(1, sync_interval - 1) if is_auto_sync else None
+
+            if target_path and os.path.exists(target_path) and is_file_locked(target_path):
+                self.progress.emit("ChemicalList.xlsx 사용 상태 확인 중...")
+                if not check_and_wait_lock(target_path, log_fn=self.progress.emit, max_retries=max_retries, retry_delay=60, is_auto_sync=is_auto_sync, check_stop_fn=lambda: getattr(self, "is_stopped", False)):
+                    raise Exception("ChemicalList.xlsx 파일이 다른 프로그램(예: 엑셀)에서 사용 중(읽기 전용 모드)입니다. 엑셀을 닫고 다시 시도해 주세요.")
+
             self.progress.emit("DB 수동 업데이트 시작...")
             
             if not os.path.exists(target_path):
                 raise Exception("ChemicalList.xlsx 파일이 없습니다.")
-                
-            db_manager = DBManager(target_path)
-            df = db_manager.load_db()
+
+            from core.concurrency_manager import snapshot_workbook
+            crawl_base_snapshot = snapshot_workbook(target_path)
+                 
+            df = pd.read_excel(target_path, sheet_name="DB")
+            df = df.rename(columns=DBManager.COLUMN_MAP)
+            df = df.loc[:, ~df.columns.duplicated()]
             
             if df.empty:
                 raise Exception("DB가 비어있습니다. 먼저 오더북 동기화를 실행하세요.")
@@ -230,6 +250,7 @@ class DbUpdateWorker(QThread):
             is_headless = self.config.get("headless", True)
             
             items_to_process = {}
+            db_lookup = {}
             
             def norm_man(m):
                 return DBManager.normalize_manufacturer(m).lower()
@@ -243,13 +264,19 @@ class DbUpdateWorker(QThread):
                 link = str(row.get("Detail_Link", row.get("상세정보_링크", ""))).strip()
                 chem_name = str(row.get("Product Name", row.get("시약명", ""))).strip()
                 if man and cat and man != "nan" and cat != "nan":
-                    items_to_process[(norm_man(man), cat)] = {"link": link, "name": chem_name}
+                    m_key = norm_man(man)
+                    items_to_process[DBManager.crawl_key(m_key, cat)] = {
+                        "manufacturer": DBManager.normalize_manufacturer(m_key),
+                        "catalog": str(cat).strip(), "link": link, "name": chem_name,
+                        "existing_sds_path": row.get("SDS_Local_Path", ""),
+                    }
+                    db_lookup[(m_key, cat)] = row.to_dict()
                     
             # 2. Load ChemicalList sheet items
             with pd.ExcelFile(target_path) as xl:
                 target_sheet = None
                 for sn in xl.sheet_names:
-                    if sn not in ["DB", "가이드(Guide)", "Guide", "index", "Old Chemical List"]:
+                    if sn not in ["DB", "가이드", "가이드(Guide)", "Guide", "index", "Old Chemical List"]:
                         target_sheet = sn
                         break
                         
@@ -273,12 +300,17 @@ class DbUpdateWorker(QThread):
                             chem_name = str(row.get(name_col, "")).strip() if name_col else ""
                             if man and cat and man != "nan" and cat != "nan":
                                 n_man = norm_man(man)
-                                if (n_man, cat) not in items_to_process:
-                                    items_to_process[(n_man, cat)] = {"link": "", "name": chem_name}
+                                crawl_key = DBManager.crawl_key(n_man, cat)
+                                if crawl_key not in items_to_process:
+                                    items_to_process[crawl_key] = {
+                                        "manufacturer": DBManager.normalize_manufacturer(n_man),
+                                        "catalog": str(cat).strip(), "link": "", "name": chem_name
+                                    }
                                 
             # Calculate how many items will be updated
             total_updates = 0
-            for (man, cat), data in items_to_process.items():
+            for data in items_to_process.values():
+                man, cat = data["manufacturer"], data["catalog"]
                 link = data["link"]
                 should_update = False
                 if self.opts["mode"] == "all":
@@ -287,7 +319,7 @@ class DbUpdateWorker(QThread):
                     if not link or "해당 제품 없음" in link or "Product Not Found" in link or "오류" in link or "요망" in link or str(link) == "nan":
                         should_update = True
                 elif self.opts["mode"] == "specific":
-                    if cat in self.opts["specific_products"]:
+                    if DBManager.crawl_key(man, cat) in self.opts["specific_products"]:
                         should_update = True
                 if should_update:
                     total_updates += 1
@@ -296,7 +328,11 @@ class DbUpdateWorker(QThread):
             crawled_results_batch = []
 
             with SB(uc=True, headless=is_headless) as sb:
-                for (man, cat), data in items_to_process.items():
+                for data in items_to_process.values():
+                    man, cat = data["manufacturer"], data["catalog"]
+                    if getattr(self, "is_stopped", False):
+                        self.progress.emit("DB 수동 업데이트가 사용자에 의해 중단되었습니다.")
+                        break
                     link = data["link"]
                     fallback_name = data["name"]
                     should_update = False
@@ -306,26 +342,27 @@ class DbUpdateWorker(QThread):
                         if not link or "해당 제품 없음" in link or "Product Not Found" in link or "오류" in link or "요망" in link or str(link) == "nan":
                             should_update = True
                     elif self.opts["mode"] == "specific":
-                        if cat in self.opts["specific_products"]:
+                        if DBManager.crawl_key(man, cat) in self.opts["specific_products"]:
                             should_update = True
                             
                     if should_update:
                         self.progress.emit(f"[{man}] {cat} 크롤링 중...")
-                        man_lower = man.lower()
                         crawled_data = None
+                        check_stop = lambda: getattr(self, "is_stopped", False)
                         try:
-                            if "thermo" in man_lower or "alfa" in man_lower or "fisher" in man_lower or "invitrogen" in man_lower or "acros" in man_lower:
-                                crawled_data = ThermofisherScraper(browser_context=sb, fast_mode=fast_mode, base_dir=src_folder).scrape(cat)
-                            elif "tci" in man_lower or "tokyo" in man_lower:
-                                crawled_data = TciScraper(browser_context=sb, fast_mode=fast_mode, base_dir=src_folder).scrape(cat)
-                            elif "sigma" in man_lower or "aldrich" in man_lower or "millipore" in man_lower:
-                                crawled_data = AldrichScraper(browser_context=sb, fast_mode=fast_mode, base_dir=src_folder).scrape(cat)
-                            elif "abcam" in man_lower:
-                                crawled_data = AbcamScraper(browser_context=sb, fast_mode=fast_mode, base_dir=src_folder).scrape(cat)
-                            else:
-                                crawled_data = {"error": "Manual Input Required"}
+                            from scrapers.registry import create_scraper
+                            scraper = create_scraper(
+                                man, browser_context=sb, fast_mode=fast_mode,
+                                base_dir=src_folder, check_stop_fn=check_stop,
+                                existing_sds_path=data.get("existing_sds_path"),
+                            )
+                            crawled_data = scraper.scrape(cat) if scraper else {"error": "Manual Input Required"}
                         except Exception as e:
                             crawled_data = {"error": f"크롤링 오류: {e}"}
+                            
+                        if getattr(self, "is_stopped", False):
+                            self.progress.emit("DB 수동 업데이트가 사용자에 의해 중단되었습니다.")
+                            break
                             
                         norm_m = DBManager.normalize_manufacturer(man)
                         db_result = {
@@ -400,6 +437,22 @@ class DbUpdateWorker(QThread):
                         crawled_results_batch.append(db_result)
                         updated += 1
 
+            if getattr(self, "is_stopped", False):
+                self.progress.emit("DB 수동 업데이트가 사용자에 의해 중단되었습니다.")
+                self.finished.emit({"success": False, "error": "사용자에 의해 DB 수동 업데이트가 중단되었습니다."})
+                return
+
+            if not crawled_results_batch or updated == 0:
+                self.finished.emit({
+                    "success": True,
+                    "conflicts": [],
+                    "non_conflicts": [],
+                    "target_path": target_path,
+                    "base_snapshot": crawl_base_snapshot,
+                    "message": "업데이트할 새로운 DB 정보가 없습니다."
+                })
+                return
+
             # Detect conflicts in-memory (DO NOT WRITE TO FILE YET)
             conflicts = []
             non_conflicts = []
@@ -414,7 +467,7 @@ class DbUpdateWorker(QThread):
                 man = db_result.get("Manufacturer", "")
                 cat = db_result.get("Catalog No.", "")
                 
-                existing = db_manager.get_product(man, cat)
+                existing = db_lookup.get((norm_man(man), cat.strip()))
                 if not existing:
                     non_conflicts.append(db_result)
                 else:
@@ -446,19 +499,55 @@ class DbUpdateWorker(QThread):
                         })
                     else:
                         merged = dict(existing)
+                        has_real_change = False
                         for k, v in db_result.items():
-                            if v not in ["", "-", "nan", "None", None, "Search Failed", "Product Not Found", "Manual Input Required"]:
+                            if v not in ["", "-", "nan", "None", None, "Search Failed", "Product Not Found", "Manual Input Required", "Manual Entry Required"]:
+                                old_v = str(existing.get(k, "")).strip() if existing.get(k) is not None else ""
+                                if old_v in ["nan", "None", "-"]:
+                                    old_v = ""
+                                new_v = str(v).strip()
+                                if k in fields_to_check and old_v.lower() != new_v.lower():
+                                    has_real_change = True
                                 merged[k] = v
-                        non_conflicts.append(merged)
+                        if has_real_change:
+                            merged["Revision Date"] = datetime.datetime.now().strftime("%Y-%m-%d")
+                            non_conflicts.append(merged)
 
             self.finished.emit({
                 "success": True, 
                 "conflicts": conflicts, 
                 "non_conflicts": non_conflicts, 
-                "target_path": target_path
+                "target_path": target_path,
+                "base_snapshot": crawl_base_snapshot,
             })
         except Exception as e:
             self.finished.emit({"success": False, "error": str(e)})
+
+
+class DbSaveWorker(QThread):
+    finished = pyqtSignal(dict)
+
+    def __init__(self, config, target_path, records, base_snapshot):
+        super().__init__()
+        self.config = config
+        self.target_path = target_path
+        self.records = records
+        self.base_snapshot = base_snapshot
+        self.is_stopped = False
+
+    def run(self):
+        try:
+            from core.sync_engine import save_db_records_win32com
+            save_db_records_win32com(
+                self.target_path,
+                self.records,
+                self.config,
+                check_stop_fn=lambda: self.is_stopped,
+                base_snapshot=self.base_snapshot,
+            )
+            self.finished.emit({"success": True, "count": len(self.records)})
+        except Exception as error:
+            self.finished.emit({"success": False, "error": str(error), "exception": error})
 
 class SyncWorker(QThread):
     progress = pyqtSignal(str)
@@ -467,14 +556,27 @@ class SyncWorker(QThread):
     def __init__(self, config):
         super().__init__()
         self.config = config
+        self.is_stopped = False
         
     def run(self):
+        import pythoncom
+        from core.concurrency_manager import WORKBOOK_OPERATION_LOCK
+        if not WORKBOOK_OPERATION_LOCK.acquire(blocking=False):
+            self.finished.emit({
+                "success": False,
+                "error": "다른 동기화 또는 DB 업데이트 작업이 이미 진행 중입니다."
+            })
+            return
+        pythoncom.CoInitialize()
         try:
-            engine = SyncEngine(self.config, callback_progress=self.progress.emit)
+            engine = SyncEngine(self.config, callback_progress=self.progress.emit, check_stop_fn=lambda: getattr(self, "is_stopped", False))
             result = engine.run_sync()
             self.finished.emit(result)
         except Exception as e:
             self.finished.emit({"success": False, "error": str(e)})
+        finally:
+            pythoncom.CoUninitialize()
+            WORKBOOK_OPERATION_LOCK.release()
 
 class MainWindow(QMainWindow):
     config_updated = pyqtSignal(dict)
@@ -485,16 +587,39 @@ class MainWindow(QMainWindow):
 
     def __init__(self, config_data):
         super().__init__()
-        self.setWindowTitle("연구실 시약 주문 관리 시스템")
-        self.resize(800, 600)
+        self.setWindowTitle("연구실 시약 주문 관리 시스템 (Chemical Manager)")
+        self.resize(880, 680)
         self.config = config_data.copy()
         
+        self.setStyleSheet(MODERN_STYLE)
         self.init_ui()
 
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(12, 10, 12, 10)
+        main_layout.setSpacing(6)
+
+        # 0. Top Status Header Card
+        header_card = QWidget()
+        header_card.setObjectName("statusHeader")
+        h_card_layout = QHBoxLayout(header_card)
+        h_card_layout.setContentsMargins(12, 6, 12, 6)
+        h_card_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        lbl_title = QLabel("🧪 연구실 시약 주문 관리 시스템")
+        lbl_title.setStyleSheet("font-size: 15px; font-weight: 700; color: #1E40AF; background: transparent;")
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        
+        self.lbl_status_badge = QLabel("🟢 자동 동기화 활성")
+        self.lbl_status_badge.setObjectName("statusBadge")
+        self.lbl_status_badge.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignCenter)
+        
+        h_card_layout.addWidget(lbl_title, 0, Qt.AlignmentFlag.AlignVCenter)
+        h_card_layout.addStretch()
+        h_card_layout.addWidget(self.lbl_status_badge, 0, Qt.AlignmentFlag.AlignVCenter)
+        main_layout.addWidget(header_card)
 
         # 1. Config Group
         grp_config = QGroupBox("기본 설정")
@@ -505,17 +630,27 @@ class MainWindow(QMainWindow):
         h_file.addWidget(QLabel("원본 파일:"))
         self.inp_file = QLineEdit(self.config.get("source_file", ""))
         self.inp_file.setReadOnly(True)
-        btn_file = QPushButton("파일 찾기")
+        btn_file = QPushButton("📁 파일 찾기")
         btn_file.clicked.connect(self.select_file)
         h_file.addWidget(self.inp_file)
         h_file.addWidget(btn_file)
         l_config.addLayout(h_file)
+
+        h_target = QHBoxLayout()
+        h_target.addWidget(QLabel("ChemicalList 파일:"))
+        self.inp_target_file = QLineEdit(self.config.get("target_file", ""))
+        self.inp_target_file.setReadOnly(True)
+        btn_target_file = QPushButton("📁 파일 찾기")
+        btn_target_file.clicked.connect(self.select_target_file)
+        h_target.addWidget(self.inp_target_file)
+        h_target.addWidget(btn_target_file)
+        l_config.addLayout(h_target)
         
         # Source Sheet
         h_sheet = QHBoxLayout()
         h_sheet.addWidget(QLabel("원본 시트:"))
         self.inp_sheet = QLineEdit(self.config.get("source_sheet", ""))
-        btn_sheet = QPushButton("시트 선택")
+        btn_sheet = QPushButton("📊 시트 선택")
         btn_sheet.clicked.connect(self.select_sheet)
         h_sheet.addWidget(self.inp_sheet)
         h_sheet.addWidget(btn_sheet)
@@ -528,7 +663,7 @@ class MainWindow(QMainWindow):
         l_config.addLayout(h_sheet)
         
         # Mapping Button
-        btn_map = QPushButton("헤더 매핑 설정 (항목 추가/삭제)")
+        btn_map = QPushButton("⚙️ 헤더 매핑 설정 (항목 추가/삭제)")
         btn_map.clicked.connect(self.open_mapping)
         l_config.addWidget(btn_map)
         
@@ -536,16 +671,15 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(grp_config)
 
         # 2. Automation Configuration
-        g_automation = QGroupBox("자동화 설정")
+        g_automation = QGroupBox("자동화 및 주기 설정")
         form_auto = QFormLayout()
         
         # Add Enable/Disable Toggle
         self.btn_toggle_auto = QPushButton("자동 동기화 정지")
+        self.btn_toggle_auto.setObjectName("btn_toggle_auto")
         self.btn_toggle_auto.setCheckable(True)
         self.btn_toggle_auto.clicked.connect(self.toggle_automation)
         
-        self.chk_watch = QCheckBox("원본 파일 변경 시 자동 업데이트")
-        self.chk_watch.setChecked(self.config.get("watch_enabled", False))
         self.spin_interval = QSpinBox()
         self.spin_interval.setRange(0, 1440) # 0 means disabled, max 24 hours
         self.spin_interval.setValue(self.config.get("sync_interval_minutes", 0))
@@ -558,42 +692,46 @@ class MainWindow(QMainWindow):
         self.chk_headless.setChecked(self.config.get("headless", True))
         
         form_auto.addRow(self.btn_toggle_auto)
-        form_auto.addRow(self.chk_watch)
         form_auto.addRow("주기적 업데이트 간격:", self.spin_interval)
         form_auto.addRow(self.chk_startup)
         form_auto.addRow(self.chk_headless)
         g_automation.setLayout(form_auto)
         main_layout.addWidget(g_automation)
         
-        btn_apply_auto = QPushButton("자동화 설정 적용")
+        btn_apply_auto = QPushButton("💾 자동화 설정 적용")
         btn_apply_auto.clicked.connect(self.save_config)
         main_layout.addWidget(btn_apply_auto)
 
         # 3. Actions Group
         h_actions = QHBoxLayout()
+        h_actions.setSpacing(8)
         
-        self.btn_sync = QPushButton("수동 동기화 실행")
-        self.btn_sync.setMinimumHeight(40)
+        self.btn_sync = QPushButton("🚀 수동 동기화 실행")
+        self.btn_sync.setObjectName("btn_sync")
+        self.btn_sync.setMinimumHeight(44)
         self.btn_sync.clicked.connect(self.run_manual_sync)
         
-        self.btn_pdf = QPushButton("PDF 자동 인쇄파일 생성")
-        self.btn_pdf.setMinimumHeight(40)
+        self.btn_db_update = QPushButton("🔄 DB 수동 업데이트")
+        self.btn_db_update.setObjectName("btn_db_update")
+        self.btn_db_update.setMinimumHeight(44)
+        self.btn_db_update.clicked.connect(self.run_db_update)
+
+        self.btn_pdf = QPushButton("📑 PDF 인쇄파일 생성")
+        self.btn_pdf.setObjectName("btn_pdf")
+        self.btn_pdf.setMinimumHeight(44)
         self.btn_pdf.clicked.connect(self.run_pdf_export)
         
-        self.btn_db_update = QPushButton("DB 수동 업데이트")
-        self.btn_db_update.setMinimumHeight(40)
-        self.btn_db_update.clicked.connect(self.run_db_update)
-        
-        self.btn_sds = QPushButton("SDS 일괄 병합 생성")
-        self.btn_sds.setMinimumHeight(40)
+        self.btn_sds = QPushButton("📦 SDS 일괄 병합")
+        self.btn_sds.setObjectName("btn_sds")
+        self.btn_sds.setMinimumHeight(44)
         self.btn_sds.clicked.connect(self.run_sds_batch)
         
-        self.btn_tray = QPushButton("백그라운드 실행 (트레이로 최소화)")
-        self.btn_tray.setMinimumHeight(40)
+        self.btn_tray = QPushButton("📌 백그라운드 실행")
+        self.btn_tray.setMinimumHeight(44)
         self.btn_tray.clicked.connect(self.minimize_to_tray)
         
-        self.btn_guide = QPushButton("도움말 및 주의사항")
-        self.btn_guide.setMinimumHeight(40)
+        self.btn_guide = QPushButton("❓ 사용 가이드")
+        self.btn_guide.setMinimumHeight(44)
         self.btn_guide.clicked.connect(self.show_guide)
         
         h_actions.addWidget(self.btn_sync)
@@ -608,15 +746,37 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("대기 중...")
         
         self.apply_colors(main_layout)
+        self.update_status_badge()
+
+    def update_status_badge(self, text=None, status_type="active"):
+        if text:
+            self.lbl_status_badge.setText(text)
+            if status_type == "paused":
+                self.lbl_status_badge.setStyleSheet("border: 1px solid #EF4444; color: #DC2626; background-color: #FEF2F2;")
+            elif status_type == "running":
+                self.lbl_status_badge.setStyleSheet("border: 1px solid #D97706; color: #D97706; background-color: #FEF3C7;")
+            else:
+                self.lbl_status_badge.setStyleSheet("border: 1px solid #0284C7; color: #0284C7; background-color: #E0F2FE;")
+            return
+
+        interval = self.config.get("sync_interval_minutes", 0)
+        is_paused = self.btn_toggle_auto.isChecked()
+        
+        if is_paused or interval == 0:
+            self.lbl_status_badge.setText("🔴 자동 동기화 정지")
+            self.lbl_status_badge.setStyleSheet("border: 1px solid #EF4444; color: #DC2626; background-color: #FEF2F2;")
+        else:
+            self.lbl_status_badge.setText(f"🟢 자동 동기화 활성 ({interval}분 주기)")
+            self.lbl_status_badge.setStyleSheet("border: 1px solid #0284C7; color: #0284C7; background-color: #E0F2FE;")
 
     def toggle_automation(self):
         if self.btn_toggle_auto.isChecked():
             # Paused
             self.btn_toggle_auto.setText("자동 동기화 시작")
-            self.chk_watch.setEnabled(False)
             self.spin_interval.setEnabled(False)
             self.statusBar().showMessage("자동 동기화 정지됨")
-            # We need to stop the watcher via config
+            self.update_status_badge("🔴 자동 동기화 정지", status_type="paused")
+            
             temp_config = self.config.copy()
             temp_config["watch_enabled"] = False
             temp_config["sync_interval_minutes"] = 0
@@ -624,10 +784,10 @@ class MainWindow(QMainWindow):
         else:
             # Resumed
             self.btn_toggle_auto.setText("자동 동기화 정지")
-            self.chk_watch.setEnabled(True)
             self.spin_interval.setEnabled(True)
             self.statusBar().showMessage("자동 동기화 활성화됨")
             self.save_config()
+            self.update_status_badge()
 
     def apply_colors(self, main_layout):
         h_bottom = QHBoxLayout()
@@ -671,6 +831,26 @@ class MainWindow(QMainWindow):
             self.inp_file.setText(file_path)
             self.save_config()
 
+    def select_target_file(self):
+        start_dir = os.path.dirname(resolve_target_file(self.config))
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "ChemicalList.xlsx 파일 선택",
+            start_dir,
+            "Excel Workbook (*.xlsx)",
+        )
+        if file_path:
+            file_path = normalize_local_path(file_path)
+            valid, error = validate_chemical_list_file(file_path)
+            if not valid:
+                QMessageBox.warning(self, "잘못된 ChemicalList 파일", error)
+                return
+            if os.path.normcase(file_path) == os.path.normcase(normalize_local_path(self.inp_file.text())):
+                QMessageBox.warning(self, "잘못된 파일 선택", "원본 오더북과 ChemicalList 파일은 서로 달라야 합니다.")
+                return
+            self.inp_target_file.setText(file_path)
+            self.save_config()
+
     def select_sheet(self):
         src_path = self.inp_file.text().strip()
         
@@ -683,17 +863,13 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "경고", "먼저 유효한 원본 파일을 선택하세요.")
             return
             
-        import win32com.client
         from PyQt6.QtWidgets import QInputDialog
+        import openpyxl
         try:
             self.log("엑셀 시트 목록을 불러오는 중...")
-            excel = win32com.client.DispatchEx("Excel.Application")
-            excel.Visible = False
-            excel.DisplayAlerts = False
-            wb = excel.Workbooks.Open(src_path, ReadOnly=True, UpdateLinks=False)
-            sheets = [sheet.Name for sheet in wb.Worksheets]
-            wb.Close(False)
-            excel.Quit()
+            wb = openpyxl.load_workbook(src_path, read_only=True, keep_links=False)
+            sheets = wb.sheetnames
+            wb.close()
             
             if sheets:
                 sheet, ok = QInputDialog.getItem(self, "시트 선택", "동기화할 시트를 선택하세요:", sheets, 0, False)
@@ -719,44 +895,91 @@ class MainWindow(QMainWindow):
             self.log("색상 설정이 업데이트 되었습니다.")
 
     def show_guide(self):
-        guide_text = """<h3>[프로그램 및 Chemical List 사용 가이드]</h3>
-<b>1. 기본 동작 원리 및 저장 기준</b><br>
-- 프로그램은 원본 Orderbook 파일의 변경을 감지하여 데이터를 읽어옵니다.<br>
-- 폴더 내에서 이름에 적힌 날짜/시간이 가장 최신인 ChemicalList 파일을 기준으로 삼습니다.<br>
-- 업데이트 완료 시 덮어쓰기 대신 새로운 날짜/시간이 적힌 새 파일(ChemicalList_YYYYMMDD_HHMMSS)을 생성합니다.<br>
-- 기존의 낡은 파일들은 안전하게 'Old Chemical List' 폴더로 자동 이동됩니다.<br>
-- 로그 파일에는 변경되는 내용을 월별로 기입합니다.<br><br>
+        guide_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "program_guide.md"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "program_guide.md"),
+            os.path.join(os.getcwd(), "program_guide.md")
+        ]
+        
+        content = ""
+        for p in guide_paths:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    break
+                except Exception:
+                    pass
 
-<b>2. 사용자 작성 시 유의사항 (Orderbook 및 Chemical List)</b><br>
-- 오더북의 "번호, 날짜, 주문자, 품목명, 시약, 수령확인, 회사, 수량, 용량, CAS 번호, 품번, 보관온도" 열의 내용을 자동으로 동기화합니다.<br>
-- 오더북을 작성할 때 없는 열은 새로 생성해주고 해당 셀의 내용을 충실하게 적어주세요<br>
-- 오더북의 시약 및 수령확인 셀에 모두 "O"표시가 되어있는 행만 사용합니다.<br>
-- 동기화 기준: 오더북 '번호'를 기준으로 기존에 등록된 시약인지 새 시약인지 판단합니다.<br>
-- 오더북에 Order No.가 있고 시약 및 수령확인에 "O"가 표시된 행은 모두 동기화합니다.<br>
-- 시약리스트에 한번 업데이트가 되었어도 다음 동기화 때 오더북에 있는 데이터를 덮어씁니다. 오더북에서 불러온 데이터는 수정하지 마세요<br>
-- Aliquat하는 경우 시약리스트의 항목을 삭제하지 말고 used에 숫자를 기입하고 새로운 행에 내용을 기입하고 개수를 적어주세요.<br>
-- 시약리스트에 Order No.가 없는 행은 동기화에서 제외됩니다.<br>
-- 수동으로 데이터를 추가할 때에는 새로운 행에 Order No.없이 내용을 적어 놓으면 됩니다 (product name은 필수입니다).<br>
-- 수령 확인 : 수령 후 수령확인 열에 'O' 또는 'ㅇ'을 입력하면 수령으로 간주되며, 시약리스트 업데이트에 사용합니다.<br>
-- 빈 줄 금지: 데이터 중간에 완전히 비어있는 줄이 있으면 데이터를 읽다가 중단될 수 있으므로 차례대로 기입하세요.<br>
-- 드롭다운 선택: 캐비넷(Cabinet)은 Room과 Storage Temp.에 따라 동적으로 변하므로 잘못된 값을 억지로 쓰지 마세요.<br><br>
+        if not content:
+            content = "# 사용 가이드\n\nprogram_guide.md 파일을 찾을 수 없습니다."
 
-<b>3. 프로그램 사용 주의사항</b><br>
-- 열린 파일 처리: Chemical List 엑셀 파일이 켜져 있어도 프로그램이 알아서 우회하여 새 파일을 생성합니다.<br>
-- 단, 원본인 Orderbook 파일은 엑셀에서 저장을 완료해야만 프로그램이 변경 사항을 정확히 감지할 수 있습니다.<br>
-- 자동 동기화 켜짐 상태에서는 Orderbook을 저장할 때마다 병합이 진행되므로, 수동 제어를 원하시면 정지 버튼을 누르세요.<br><br>
+        contact_info = """
 
-<hr>
-<b>제작자:</b> Jeonghun Lee<br>
-<b>문의:</b> jhl22@hanyang.ac.kr
+---
+
+## 👨‍💻 제작자 및 문의처
+제작자 : Jeonghun Lee  
+문의 : jhl22@hanyang.ac.kr
 """
-        msg = QMessageBox(self)
-        msg.setWindowTitle("도움말 및 주의사항")
-        msg.setText(guide_text)
-        msg.exec()
+        if "제작자 및 문의처" in content:
+            full_content = content
+        else:
+            full_content = content + contact_info
+
+        # Add generous line spacing around section headers and divider lines
+        full_content = full_content.replace("\n---\n", "\n\n---\n\n")
+        full_content = full_content.replace("\n## ", "\n\n\n## ")
+        full_content = full_content.replace("\n### ", "\n\n### ")
+
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QTextBrowser, QPushButton
+        
+        dlg = QDialog(self)
+        dlg.setWindowTitle("📖 연구실 시약 관리 시스템 사용 가이드")
+        dlg.resize(840, 680)
+        
+        layout = QVBoxLayout(dlg)
+        layout.setContentsMargins(14, 14, 14, 14)
+        
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        browser.document().setDefaultStyleSheet("""
+            h1 { margin-top: 24px; margin-bottom: 16px; font-size: 18px; font-weight: bold; color: #0F172A; }
+            h2 { margin-top: 28px; margin-bottom: 18px; font-size: 16px; font-weight: bold; color: #1E293B; }
+            h3 { margin-top: 20px; margin-bottom: 14px; font-size: 14px; font-weight: bold; color: #334155; }
+            hr { margin-top: 26px; margin-bottom: 26px; border: none; height: 1px; background-color: #CBD5E1; }
+            p { margin-top: 6px; margin-bottom: 12px; line-height: 1.6; }
+            li { margin-top: 4px; margin-bottom: 6px; }
+            table { margin-top: 14px; margin-bottom: 16px; }
+        """)
+        browser.setMarkdown(full_content)
+        browser.setStyleSheet("""
+            QTextBrowser {
+                background-color: #FFFFFF;
+                border: 1px solid #CBD5E1;
+                border-radius: 8px;
+                padding: 18px;
+                font-family: 'Segoe UI', 'Pretendard', 'Malgun Gothic', sans-serif;
+                font-size: 13px;
+                color: #0F172A;
+            }
+        """)
+        layout.addWidget(browser)
+        
+        h_btn = QHBoxLayout()
+        h_btn.addStretch()
+        btn_close = QPushButton("확인 및 닫기")
+        btn_close.setMinimumWidth(100)
+        btn_close.setMinimumHeight(34)
+        btn_close.clicked.connect(dlg.accept)
+        h_btn.addWidget(btn_close)
+        layout.addLayout(h_btn)
+        
+        dlg.exec()
 
     def save_config(self):
         self.config["source_file"] = self.inp_file.text()
+        self.config["target_file"] = self.inp_target_file.text()
         self.config["source_sheet"] = self.inp_sheet.text()
         self.config["header_row"] = self.spin_header.value()
         
@@ -764,7 +987,7 @@ class MainWindow(QMainWindow):
             self.config["watch_enabled"] = False
             self.config["sync_interval_minutes"] = 0
         else:
-            self.config["watch_enabled"] = self.chk_watch.isChecked()
+            self.config["watch_enabled"] = False
             self.config["sync_interval_minutes"] = self.spin_interval.value()
         
         
@@ -774,7 +997,15 @@ class MainWindow(QMainWindow):
         import utils.startup_manager as sm
         sm.set_run_on_startup(self.config["run_on_startup"])
         
+        try:
+            from core.config_manager import save_config
+            save_config(self.config)
+        except OSError as error:
+            self.log(str(error))
+            QMessageBox.critical(self, "설정 저장 오류", str(error))
+            return False
         self.config_updated.emit(self.config)
+        return True
 
     def log(self, message):
         import datetime
@@ -785,11 +1016,7 @@ class MainWindow(QMainWindow):
         self.txt_log.append(full_msg)
         
         try:
-            import sys
-            if getattr(sys, 'frozen', False):
-                app_root = os.path.dirname(sys.executable)
-            else:
-                app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            app_root = get_app_root()
             log_dir = os.path.join(app_root, "logs")
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
@@ -797,14 +1024,24 @@ class MainWindow(QMainWindow):
             file_path = os.path.join(log_dir, file_name)
             with open(file_path, "a", encoding="utf-8") as f:
                 f.write(f"[{now.strftime('%Y-%m-%d %H:%M:%S')}] {message}\n")
-        except Exception:
-            pass
+        except Exception as error:
+            import sys
+            print(f"Application log write warning: {error}", file=sys.stderr)
 
     def run_manual_sync(self):
+        if hasattr(self, 'sync_worker') and self.sync_worker and self.sync_worker.isRunning():
+            self.log("🛑 사용자에 의해 수동 동기화 중단 요청이 전송되었습니다.")
+            self.statusBar().showMessage("동기화 중단 중...")
+            if hasattr(self.sync_worker, 'engine') and self.sync_worker.engine:
+                self.sync_worker.engine.stop_requested = True
+            self.sync_worker.is_stopped = True
+            return
+
         self.save_config()
         self.log("--- 수동 동기화 시작 ---")
         self.statusBar().showMessage("수동 동기화 진행 중...")
-        self.btn_sync.setEnabled(False)
+        self.btn_sync.setText("🛑 동기화 중단")
+        self.btn_sync.setEnabled(True)
         self.manual_sync_started.emit()
         
         self.sync_worker = SyncWorker(self.config)
@@ -813,6 +1050,7 @@ class MainWindow(QMainWindow):
         self.sync_worker.start()
 
     def on_sync_finished(self, result):
+        self.btn_sync.setText("🚀 수동 동기화 실행")
         self.btn_sync.setEnabled(True)
         self.manual_sync_finished.emit()
         self.statusBar().showMessage("동기화 완료", 5000)
@@ -823,8 +1061,10 @@ class MainWindow(QMainWindow):
             self.log(f"동기화 완료! (신규: {new}건, 업데이트: {upd}건)")
             QMessageBox.information(self, "성공", f"동기화가 완료되었습니다.\n신규: {new}건\n업데이트: {upd}건")
         else:
-            self.log(f"오류 발생: {result.get('error')}")
-            QMessageBox.critical(self, "오류", f"동기화 중 오류가 발생했습니다:\n{result.get('error')}")
+            err_msg = result.get('error', '')
+            self.log(f"오류/안내: {err_msg}")
+            if "중단되었습니다" not in err_msg:
+                QMessageBox.critical(self, "오류", f"동기화 중 오류가 발생했습니다:\n{err_msg}")
 
     def run_pdf_export(self):
         dialog = PdfDialog(self.config["target_headers"], self)
@@ -881,29 +1121,51 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "오류", f"SDS 병합 중 오류가 발생했습니다:\n{result.get('error')}")
 
     def run_db_update(self):
+        if hasattr(self, 'db_save_worker') and self.db_save_worker and self.db_save_worker.isRunning():
+            self.log("🛑 사용자에 의해 DB 저장 중단 요청이 전송되었습니다.")
+            self.statusBar().showMessage("DB 저장 중단 중...")
+            self.db_save_worker.is_stopped = True
+            return
+        if hasattr(self, 'db_worker') and self.db_worker and self.db_worker.isRunning():
+            self.log("🛑 사용자에 의해 DB 수동 업데이트 중단 요청이 전송되었습니다.")
+            self.statusBar().showMessage("DB 업데이트 중단 중...")
+            self.db_worker.is_stopped = True
+            return
+
         dlg = DbUpdateDialog(self.config, self)
         if dlg.exec():
             opts = dlg.get_options()
             self.save_config()
-            self.btn_db_update.setEnabled(False)
-            self.statusBar().showMessage("DB 수동 업데이트 중...")
-            self.db_worker = DbUpdateWorker(self.config, opts)
-            self.db_worker.progress.connect(self.log)
-            self.db_worker.finished.connect(self.on_db_update_finished)
-            self.db_worker.start()
+            self._db_restart_count = 0
+            self._start_db_update_worker(opts)
+
+    def _start_db_update_worker(self, opts):
+        self.btn_db_update.setText("🛑 DB 업데이트 중단")
+        self.btn_db_update.setEnabled(True)
+        self.statusBar().showMessage("DB 수동 업데이트 중...")
+        self.db_worker = DbUpdateWorker(self.config, opts)
+        self.db_worker.progress.connect(self.log)
+        self.db_worker.finished.connect(self.on_db_update_finished)
+        self.db_worker.start()
 
     def on_db_update_finished(self, result):
+        self.btn_db_update.setText("🔄 DB 수동 업데이트")
         self.btn_db_update.setEnabled(True)
         self.statusBar().showMessage("크롤링 완료", 5000)
         
         if not result.get("success"):
-            self.log(f"DB 업데이트 오류: {result.get('error')}")
-            QMessageBox.critical(self, "오류", f"DB 업데이트 중 오류가 발생했습니다:\n{result.get('error')}")
+            err_msg = result.get('error', '')
+            self.log(f"DB 업데이트 안내: {err_msg}")
+            if "중단되었습니다" not in err_msg:
+                QMessageBox.critical(self, "오류", f"DB 업데이트 중 오류가 발생했습니다:\n{err_msg}")
+            if hasattr(self, "db_worker"):
+                self.db_worker.release_operation_lock()
             return
 
         conflicts = result.get("conflicts", [])
         non_conflicts = result.get("non_conflicts", [])
         target_path = result.get("target_path", "")
+        base_snapshot = result.get("base_snapshot")
         
         records_to_save = list(non_conflicts)
         
@@ -916,31 +1178,93 @@ class MainWindow(QMainWindow):
                 self.log("DB 수동 업데이트가 사용자에 의해 취소되었습니다. (파일 변경 없음)")
                 self.statusBar().showMessage("DB 수동 업데이트 취소됨")
                 QMessageBox.information(self, "취소", "DB 수동 업데이트가 취소되었습니다.\n엑셀 파일에는 아무 내용도 변경되지 않았습니다.")
+                self.db_worker.release_operation_lock()
                 return
 
         if records_to_save:
-            try:
-                from core.db_manager import DBManager
-                from core.sync_engine import refresh_chemical_list_formatting
-                db_manager = DBManager(target_path)
-                db_manager.add_products_batch(records_to_save)
-                
-                self.log("ChemicalList 시트 서식 및 유효성 검사 갱신 중...")
-                refresh_chemical_list_formatting(target_path, self.config)
-                
-                self.log(f"DB 수동 업데이트 저장 완료! (총 {len(records_to_save)}개 반영)")
-                QMessageBox.information(self, "성공", f"DB 수동 업데이트가 성공적으로 저장되었습니다.\n(총 {len(records_to_save)}개 반영)")
-            except Exception as e:
-                self.log(f"DB 저장 중 오류 발생: {e}")
-                QMessageBox.critical(self, "오류", f"DB 저장 중 오류가 발생했습니다:\n{e}")
+            self.btn_db_update.setText("🛑 DB 저장 중단")
+            self.statusBar().showMessage("공동편집 최신본 검증 및 DB 저장 중...")
+            self.db_save_worker = DbSaveWorker(
+                self.config, target_path, records_to_save, base_snapshot
+            )
+            self.db_save_worker.finished.connect(self.on_db_save_finished)
+            self.db_save_worker.start()
+            return
         else:
             self.log("업데이트할 새로운 DB 정보가 없습니다.")
             QMessageBox.information(self, "안내", "업데이트할 새로운 DB 정보가 없습니다.")
+        if hasattr(self, "db_worker"):
+            self.db_worker.release_operation_lock()
+
+    def on_db_save_finished(self, result):
+        self.btn_db_update.setText("🔄 DB 수동 업데이트")
+        self.btn_db_update.setEnabled(True)
+
+        if result.get("success"):
+            count = result.get("count", 0)
+            self.statusBar().showMessage("DB 저장 완료", 5000)
+            self.log(f"DB 수동 업데이트 저장 완료! (총 {count}개 반영)")
+            QMessageBox.information(
+                self, "성공", f"DB 수동 업데이트가 성공적으로 저장되었습니다.\n(총 {count}개 반영)"
+            )
+        else:
+            error = result.get("exception")
+            error_text = result.get("error", "")
+            self.log(f"DB 저장 중 오류 발생: {error_text}")
+            from core.concurrency_manager import ConcurrentEditConflict
+            if isinstance(error, ConcurrentEditConflict) and getattr(self, "_db_restart_count", 0) < 2:
+                self._db_restart_count = getattr(self, "_db_restart_count", 0) + 1
+                opts = self.db_worker.opts
+                self.log(
+                    f"공동편집 직접 충돌로 DB 업데이트를 최신본에서 처음부터 다시 실행합니다. "
+                    f"({self._db_restart_count}/2)"
+                )
+                self.db_worker.release_operation_lock()
+                self._start_db_update_worker(opts)
+                return
+            if "중단되었습니다" not in error_text:
+                QMessageBox.critical(self, "오류", f"DB 저장 중 오류가 발생했습니다:\n{error_text}")
+            self.statusBar().showMessage("DB 저장 중단/실패", 5000)
+
+        if hasattr(self, "db_worker"):
+            self.db_worker.release_operation_lock()
 
     def minimize_to_tray(self):
         self.save_config()
         self.tray_requested.emit()
+
+    def set_background_sync_active(self, active):
+        """Keep manual write actions aligned with the global workbook operation."""
+        if not (hasattr(self, 'sync_worker') and self.sync_worker and self.sync_worker.isRunning()):
+            self.btn_sync.setEnabled(not active)
+        if not (hasattr(self, 'db_worker') and self.db_worker and self.db_worker.isRunning()):
+            self.btn_db_update.setEnabled(not active)
+        if active:
+            self.statusBar().showMessage("자동 동기화 진행 중...")
+
+    def _workers(self):
+        names = ("sync_worker", "db_worker", "db_save_worker", "pdf_worker", "sds_worker")
+        return [getattr(self, name, None) for name in names if getattr(self, name, None)]
+
+    def stop_all_workers(self):
+        for worker in self._workers():
+            if hasattr(worker, "is_stopped"):
+                worker.is_stopped = True
+            engine = getattr(worker, "engine", None)
+            if engine is not None:
+                engine.is_stopped_flag = True
+
+    def wait_for_workers(self, timeout_ms=10000):
+        running = [worker for worker in self._workers() if worker.isRunning()]
+        if not running:
+            return True
+        per_worker = max(100, timeout_ms // len(running))
+        stopped = True
+        for worker in running:
+            stopped = worker.wait(per_worker) and stopped
+        return stopped
         
     def closeEvent(self, event):
+        self.stop_all_workers()
         self.close_requested.emit()
         event.accept()

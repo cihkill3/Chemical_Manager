@@ -3,13 +3,19 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
 from PyQt6.QtCore import Qt
 import os
 import urllib.parse
+import tempfile
+import shutil
+import pandas as pd
+from gui.styles import MODERN_STYLE
 from core.db_manager import DBManager
+from core.config_manager import resolve_target_file
 
 class DbUpdateDialog(QDialog):
     def __init__(self, config, parent=None):
         super().__init__(parent)
         self.setWindowTitle("DB 수동 업데이트")
-        self.resize(500, 400)
+        self.resize(520, 420)
+        self.setStyleSheet(MODERN_STYLE)
         self.config = config
         self.mode = "missing"
         self.specific_products = []
@@ -18,23 +24,25 @@ class DbUpdateDialog(QDialog):
 
     def load_db_df(self):
         try:
-            target_path = self.config.get("target_file", "")
-            if not target_path or not os.path.exists(target_path):
-                src_path_raw = self.config.get("source_file", "")
-                if src_path_raw.startswith("file:///"):
-                    src_path_raw = urllib.parse.unquote(src_path_raw[8:])
-                src_folder = os.path.dirname(os.path.abspath(src_path_raw))
-                
-                candidates = [os.path.join(src_folder, f) for f in os.listdir(src_folder) if f.startswith("ChemicalList") and f.endswith(".xlsx") and not f.startswith("~$")]
-                if candidates:
-                    candidates.sort(key=os.path.getmtime, reverse=True)
-                    target_path = candidates[0]
-                else:
-                    target_path = os.path.join(src_folder, "ChemicalList.xlsx")
+            target_path = resolve_target_file(self.config)
             
             if os.path.exists(target_path):
-                db_manager = DBManager(target_path)
-                df = db_manager.load_db()
+                try:
+                    df = pd.read_excel(target_path, sheet_name="DB")
+                except Exception as ex:
+                    print(f"Direct pd.read_excel error ({ex}), trying temp copy...")
+                    fd, temp_path = tempfile.mkstemp(prefix="chemical_db_read_", suffix=".xlsx")
+                    os.close(fd)
+                    try:
+                        shutil.copy2(target_path, temp_path)
+                        df = pd.read_excel(temp_path, sheet_name="DB")
+                    finally:
+                        try:
+                            os.remove(temp_path)
+                        except OSError as cleanup_error:
+                            print(f"Temporary DB copy cleanup warning: {cleanup_error}")
+                df = df.rename(columns=DBManager.COLUMN_MAP)
+                df = df.loc[:, ~df.columns.duplicated()]
                 return df
         except Exception as e:
             print("load_db_df error:", e)
@@ -74,7 +82,7 @@ class DbUpdateDialog(QDialog):
                 item = QListWidgetItem(item_str)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Unchecked)
-                item.setData(Qt.ItemDataRole.UserRole, cat) # Save cat in UserRole
+                item.setData(Qt.ItemDataRole.UserRole, DBManager.crawl_key(man, cat))
                 self.list_specific.addItem(item)
         else:
             self.list_specific.addItem("DB 데이터를 불러올 수 없습니다.")
@@ -115,9 +123,9 @@ class DbUpdateDialog(QDialog):
             for i in range(self.list_specific.count()):
                 item = self.list_specific.item(i)
                 if item.checkState() == Qt.CheckState.Checked:
-                    cat = item.data(Qt.ItemDataRole.UserRole)
-                    if cat:
-                        checked_items.append(cat)
+                    product_key = item.data(Qt.ItemDataRole.UserRole)
+                    if product_key:
+                        checked_items.append(product_key)
             
             if not checked_items:
                 QMessageBox.warning(self, "경고", "업데이트할 항목을 하나 이상 체크하세요.")
