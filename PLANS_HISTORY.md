@@ -468,3 +468,36 @@
 4. 새 백업은 원본 파일의 수정시각을 상속하지 않도록 복사 직후 실제 생성 시각으로 수정시각을 설정한다.
 5. ChemicalList가 프로그램과 다른 OneDrive 폴더에 있어도 프로그램 하위에만 백업이 생기고 OneDrive 쪽 backup은 생성되지 않는 회귀 테스트를 추가한다.
 6. 전체 코드 검색으로 백업 경로 직접 조합이 중앙 모듈 밖에 남지 않았는지 확인하고 전체 테스트 및 컴파일을 수행한다.
+
+---
+
+## [2026-08-18 #28] Python 전체 코드 리뷰 통합 수정 계획 및 마지막 행 기준 확정
+
+### 사용자 지시
+
+- VBA는 사용하지 않으며 `chem_manager_app` Python 코드만 수정한다.
+- 기존 코드 리뷰, 첨부 리뷰, `ABSOLUTE_PRINCIPLES.md`를 함께 검토하여 모든 수정 계획을 통합한다.
+- 원칙 18의 다중 열 마지막 행 계산과 기존 #22의 `Product Name` 단독 기준 충돌을 해소한다.
+- 코딩 승인 후에도 기존 원칙과 계획 이력은 삭제·축소하지 않고 Append Only로 유지한다.
+
+### 기준 확정
+
+- ChemicalList 신규 행, DB 신규 행, 3-Way 병합, DB 저장의 마지막 행 계산은 모두 `meaningful_data_last_row()`를 사용한다.
+- `Product Name` 단독 기준을 유지한다는 #22의 결정은 본 기록부터 폐기한다.
+- `Order No.` 또는 DB `Key` 단일 열이 비어 있어도 Product Name, Original Product Name, Manufacturer, Catalog No. 등 의미 있는 데이터가 있는 행을 반드시 보존한다.
+
+### 구현 순서
+
+1. `DbUpdateWorker`의 `src_folder` 미정의, `save_db_records_win32com`의 DB 마지막 행 덮어쓰기, PDF 검증 실패 허용을 우선 수정한다.
+2. 자동 동기화와 수동 DB 업데이트의 크롤링 결과 정규화를 공통 함수로 통합하고 Sensitivity 보존 규칙을 통일한다.
+3. DB COM O(n²) 탐색을 메모리 인덱스로 교체하고 DB 쓰기 블록을 공통 헬퍼로 통합한다.
+4. 중복 논리 키 검출, 설정 원자적 저장, 로그 저장 실패 표시, 잔여 네트워크 작업 추적을 추가한다.
+5. 제조사/COA 지원 레지스트리 통합, bare except 진단 로깅, 속성 초기화, 색상 취소·자동 동기화 UI·PDF 시트명 문제를 수정한다.
+6. Lot 표시값 보존, 180일 SDS/COA 캐시, 사용자 입력값 보존 및 대상 파일 중앙 경로 회귀 테스트를 보강한다.
+
+### 검증 기준
+
+- 기존 pytest를 유지하면서 수동 DB 업데이트, 희소 DB 행, 잘못된 PDF, Sensitivity 보존, 중복 키, 원자적 설정 저장, 공개 import 무결성 테스트를 추가한다.
+- 실제 운영 Excel 파일은 테스트에 사용하지 않고 임시 복사본과 mock COM 객체를 사용한다.
+- Python 문법, 전체 pytest, 공개 import, Qt offscreen UI, Excel COM 임시 통합, PyInstaller 동적 import를 순서대로 검증한다.
+- 실제 OneDrive 로컬 사본과 서버 리비전의 한계는 문서·로그·최종 검증 결과에 명시한다.

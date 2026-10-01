@@ -72,8 +72,19 @@ class QualityDownloadResult:
         return data
 
 
-def _safe(value: str) -> str:
-    return re.sub(r"[^0-9A-Za-z._-]+", "_", value.strip()).strip("._")
+def _safe(value: str, fallback: str = "Unknown") -> str:
+    """Make a readable Windows filename component while preserving Unicode names."""
+    text = str(value or "").strip()
+    text = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", text)
+    text = re.sub(r"\s+", " ", text).strip(" .")
+    return text[:120] or fallback
+
+
+def _document_filename(product_name: str, manufacturer: str, catalog: str, lot: str, document_type: str) -> str:
+    return (
+        f"{_safe(product_name)} ({_safe(manufacturer)}, {_safe(catalog)}, "
+        f"Lot_{_safe(lot)}) - {document_type}.pdf"
+    )
 
 
 def _compact(value: str) -> str:
@@ -184,7 +195,7 @@ def _capture_window_open(context, selector: str, *, timeout_seconds: int = 15) -
     return result["url"]
 
 
-def _download_tci(context, catalog: str, lot: str, folder: Path) -> QualityDocument:
+def _download_tci(context, catalog: str, lot: str, folder: Path, product_name: str = "") -> QualityDocument:
     product_url = f"https://www.tcichemicals.com/KR/ko/p/{quote(catalog.upper())}"
     context.get(product_url)
     script = """
@@ -219,7 +230,7 @@ def _download_tci(context, catalog: str, lot: str, folder: Path) -> QualityDocum
         raise QualityDocumentError(result.get("error", "TCI COA 응답이 없습니다."))
     content = base64.b64decode(result["data"])
     _verify_pdf(content, catalog, lot, require_coa=True)
-    path = _save_pdf(folder, f"TCI_{_safe(catalog)}_{_safe(lot)}_COA.pdf", content)
+    path = _save_pdf(folder, _document_filename(product_name, "TCI", catalog, lot, "COA"), content)
     return QualityDocument("COA", path, product_url, catalog, lot)
 
 
@@ -324,7 +335,7 @@ def _print_current_page_pdf(context, source_url: str, catalog: str, lot: str) ->
     return base64.b64decode(payload["data"])
 
 
-def _download_aldrich(context, catalog: str, lot: str, folder: Path) -> QualityDocument:
+def _download_aldrich(context, catalog: str, lot: str, folder: Path, product_name: str = "") -> QualityDocument:
     product_url = _find_aldrich_product(context, catalog)
     resolved_lot = lot
     try:
@@ -342,7 +353,7 @@ def _download_aldrich(context, catalog: str, lot: str, folder: Path) -> QualityD
         except QualityDocumentError:
             content = _http_pdf(source_url, referer=product_url)
     _verify_pdf(content, catalog, resolved_lot, require_coa=True)
-    path = _save_pdf(folder, f"Aldrich_{_safe(catalog)}_{_safe(lot)}_COA.pdf", content)
+    path = _save_pdf(folder, _document_filename(product_name, "Aldrich", catalog, lot, "COA"), content)
     return QualityDocument("COA", path, source_url, catalog, lot)
 
 
@@ -352,13 +363,58 @@ def _flatten_thermo_assets(payload: dict) -> Iterable[dict]:
             yield from document_type.get("assets", [])
 
 
-def _download_thermofisher(context, catalog: str, lot: str, folder: Path) -> QualityDocument:
+def _thermo_values(value) -> list[str]:
+    if value in (None, ""):
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value]
+    return [str(value)]
+
+
+def _thermo_asset_matches(asset: dict, catalog: str, lot: str) -> bool:
+    catalog_values = _thermo_values(asset.get("sku")) + _thermo_values(asset.get("rootSku"))
+    return (
+        _compact(str(asset.get("lotNumber", ""))) == _compact(lot)
+        and "certificate of analysis" in str(asset.get("documentType", "")).casefold()
+        and any(_compact(value) == _compact(catalog) for value in catalog_values)
+    )
+
+
+def _thermo_document_url(path: str) -> str:
+    clean_path = str(path or "").lstrip("/")
+    if not clean_path:
+        raise QualityDocumentError("Thermo Fisher 인증서 응답에 문서 경로가 없습니다.")
+    # Dynamically generated eCertificates are served by assets.thermofisher.com;
+    # legacy TFS-Assets paths continue to use documents.thermofisher.com.
+    host = (
+        "https://assets.thermofisher.com/"
+        if clean_path.casefold().startswith("api/ecertificate/")
+        else "https://documents.thermofisher.com/"
+    )
+    return host + quote(clean_path, safe="/")
+
+
+def _thermo_pdf_catalog(asset: dict, requested_catalog: str) -> str:
+    """Return the catalog printed on a Thermo certificate.
+
+    Package SKUs can resolve to a certificate that prints only its root catalog.
+    The asset metadata provides the verified package-SKU-to-root-SKU relation.
+    """
+    root_skus = _thermo_values(asset.get("rootSku"))
+    for root_sku in root_skus:
+        if _compact(root_sku) == _compact(requested_catalog):
+            return requested_catalog
+    return root_skus[0] if root_skus else requested_catalog
+
+
+def _download_thermofisher(context, catalog: str, lot: str, folder: Path, product_name: str = "") -> QualityDocument:
     catalog_upper = catalog.upper()
     product_url = f"https://www.thermofisher.com/order/catalog/product/{quote(catalog_upper)}"
     context.get(product_url)
     api = (
         "/api/store/Assets/Documents/Certificates/v2/search?"
-        f"skus={quote(catalog_upper)}&country=kr&targetSite=TF&partialLotNumber=true"
+        f"skus={quote(catalog_upper)}&country=kr&targetSite=TF"
+        f"&partialSkuSearch=true&partialLotNumber=true"
         f"&erpType=Global_E1&lotNumbers={quote(lot)}"
     )
     response = _browser_fetch(context, api, accept="application/json")
@@ -369,24 +425,22 @@ def _download_thermofisher(context, catalog: str, lot: str, folder: Path) -> Qua
     matches = [
         asset
         for asset in _flatten_thermo_assets(payload)
-        if _compact(str(asset.get("lotNumber", ""))) == _compact(lot)
-        and "certificate of analysis" in str(asset.get("documentType", "")).casefold()
-        and any(_compact(sku) == _compact(catalog) for sku in asset.get("sku", []))
+        if _thermo_asset_matches(asset, catalog, lot)
     ]
     if not matches:
         raise QualityDocumentError(f"Thermo Fisher COA를 찾지 못했습니다: {catalog} / {lot}")
     asset = matches[0]
-    source_url = "https://documents.thermofisher.com/" + quote(asset["path"], safe="/")
+    source_url = _thermo_document_url(asset.get("path", ""))
     try:
         content = _http_pdf(source_url, referer=product_url)
     except Exception:
         content = _browser_fetch(context, source_url)["content"]
-    _verify_pdf(content, catalog, lot, require_coa=True)
-    path = _save_pdf(folder, f"ThermoFisher_{_safe(catalog)}_{_safe(lot)}_COA.pdf", content)
+    _verify_pdf(content, _thermo_pdf_catalog(asset, catalog), lot, require_coa=True)
+    path = _save_pdf(folder, _document_filename(product_name, "ThermoFisher", catalog, lot, "COA"), content)
     return QualityDocument("COA", path, source_url, catalog, lot)
 
 
-def _download_abcam(context, catalog: str, lot: str, folder: Path) -> QualityDownloadResult:
+def _download_abcam(context, catalog: str, lot: str, folder: Path, product_name: str = "") -> QualityDownloadResult:
     product_url = f"https://www.abcam.com/{catalog.lower()}"
     context.get(product_url)
     _wait_ready(context, 5)
@@ -396,7 +450,7 @@ def _download_abcam(context, catalog: str, lot: str, folder: Path) -> QualityDow
     datasheet = _http_pdf(datasheet_url, referer=product_url)
     _verify_pdf(datasheet, catalog, None, require_coa=False)
     datasheet_path = _save_pdf(
-        folder, f"Abcam_{_safe(catalog)}_{_safe(lot)}_Datasheet.pdf", datasheet
+        folder, _document_filename(product_name, "Abcam", catalog, lot, "Datasheet"), datasheet
     )
     documents.append(QualityDocument("Datasheet", datasheet_path, datasheet_url, catalog, lot))
 
@@ -419,7 +473,7 @@ def _download_abcam(context, catalog: str, lot: str, folder: Path) -> QualityDow
         )
     ):
         raise QualityDocumentError("Abcam 문서에서 CoC 표기를 확인하지 못했습니다.")
-    coc_path = _save_pdf(folder, f"Abcam_{_safe(catalog)}_{_safe(lot)}_CoC.pdf", coc)
+    coc_path = _save_pdf(folder, _document_filename(product_name, "Abcam", catalog, lot, "CoC"), coc)
     documents.append(QualityDocument("CoC", coc_path, coc_url, catalog, lot))
 
     return QualityDownloadResult(
@@ -441,21 +495,22 @@ def download_quality_documents(
     catalog: str,
     lot: str,
     output_dir: str | Path,
+    product_name: str = "",
 ) -> dict:
     """Download and verify official quality documents for one product lot."""
     vendor_key = re.sub(r"[^a-z]", "", vendor.casefold())
     folder = Path(output_dir)
     if vendor_key == "tci":
-        document = _download_tci(context, catalog, lot, folder)
+        document = _download_tci(context, catalog, lot, folder, product_name)
         result = QualityDownloadResult("TCI", catalog, lot, "downloaded", [document])
     elif vendor_key in {"aldrich", "sigmaaldrich", "sigma"}:
-        document = _download_aldrich(context, catalog, lot, folder)
+        document = _download_aldrich(context, catalog, lot, folder, product_name)
         result = QualityDownloadResult("Aldrich", catalog, lot, "downloaded", [document])
     elif vendor_key in {"thermofisher", "thermo"}:
-        document = _download_thermofisher(context, catalog, lot, folder)
+        document = _download_thermofisher(context, catalog, lot, folder, product_name)
         result = QualityDownloadResult("ThermoFisher", catalog, lot, "downloaded", [document])
     elif vendor_key == "abcam":
-        result = _download_abcam(context, catalog, lot, folder)
+        result = _download_abcam(context, catalog, lot, folder, product_name)
     else:
         raise QualityDocumentError(f"지원하지 않는 제조사입니다: {vendor}")
     return result.to_dict()

@@ -1,5 +1,5 @@
 {
-    "source_file": "C:\\Users\\Jeonghun Lee\\.gemini\\antigravity\\scratch\\chemical manager\\chem_manager_app\\dist\\order book.xlsx",
+    "source_file": "C:\\Users\\Jeonghun Lee\\OneDrive\\2026 orderbook\\ChemicalList_Test\\order book_test.xlsx",
     "source_sheet": "2026",
     "header_row": 7,
     "source_headers": [
@@ -13,7 +13,8 @@
         "품번",
         "용량",
         "수량",
-        "보관온도"
+        "보관온도",
+        "Lot No."
     ],
     "target_headers": [
         "Order No.",
@@ -30,7 +31,11 @@
         "Quantity",
         "Used",
         "Status",
-        "Remarks"
+        "Remarks",
+        "Lot No.",
+        "Expiration Date",
+        "COA Link",
+        "COA Local Path"
     ],
     "mapping": {
         "Order No.": "번호",
@@ -47,7 +52,8 @@
         "Quantity": "수량",
         "Used": "",
         "Status": "",
-        "Remarks": ""
+        "Remarks": "",
+        "Lot No.": "Lot No."
     },
     "colors": {
         "done_bg": "#e6f7e6",
@@ -63,8 +69,17 @@
         "normal_bg": "#ffffff",
         "normal_font": "#000000",
         "header_bg": "#d9d9d9",
-        "header_font": "#000000"
+        "header_font": "#000000",
+        "search_failed_bg": "#ffff00",
+        "search_failed_font": "#ff0000",
+        "manual_input_bg": "#ffff00",
+        "manual_input_font": "#ff0000",
+        "status_x_bg": "#ffe6e6",
+        "status_x_font": "#ff0000"
     },
-    "sync_interval_minutes": 10,
-    "watch_enabled": true
+    "sync_interval_minutes": 5,
+    "watch_enabled": false,
+    "target_file": "C:\\Users\\Jeonghun Lee\\OneDrive\\2026 orderbook\\ChemicalList_Test\\ChemicalList.xlsx",
+    "run_on_startup": false,
+    "headless": true
 }

@@ -86,6 +86,9 @@ class SyncEngine:
         self._base_fingerprint = None
         self._restart_count = 0
         self._coa_commit_metadata = []
+        self.sb_context_manager = None
+        self.sb = None
+        self.excel_pid = None
 
     def is_stopped(self):
         if self.is_stopped_flag:
@@ -744,6 +747,8 @@ class SyncEngine:
             coa_download_requests = []
             src_lot_name = mapping.get("Lot No.", "Lot No.")
             src_lot_col = src_col_map.get(src_lot_name, 0)
+            src_product_name = mapping.get("Product Name", "Product Name")
+            src_product_col = src_col_map.get(src_product_name, 0)
             coa_path_col = tgt_col_map.get("COA Local Path", 0)
             tgt_lot_col = tgt_col_map.get("Lot No.", 0)
             if src_lot_col and src_mfr_col and src_cat_col:
@@ -754,9 +759,13 @@ class SyncEngine:
                     vendor = DBManager.normalize_manufacturer(self.as_excel_text(row_data[src_mfr_col - 1]))
                     catalog = self.as_excel_text(row_data[src_cat_col - 1])
                     lot = normalize_lot(row_data[src_lot_col - 1])
+                    product_name = self.as_excel_text(row_data[src_product_col - 1]) if src_product_col else ""
                     if not order_number or not vendor or not catalog or not lot or not is_supported_vendor(vendor):
                         continue
-                    request = {"order": order_number, "vendor": vendor, "catalog": catalog, "lot": lot}
+                    request = {
+                        "order": order_number, "vendor": vendor, "catalog": catalog,
+                        "lot": lot, "product_name": product_name,
+                    }
                     coa_requests_by_order[order_number] = request
                     existing_row = tgt_dict.get(order_number)
                     cached = False
@@ -956,11 +965,30 @@ class SyncEngine:
                     if r_val:
                         revision_cell.Value = r_val
 
+            mfr_col = get_tc(["Manufacturer", "제조사", "회사"])
+            cat_col = get_tc(["Catalog No.", "제품번호", "품번", "카탈로그 번호"])
+            name_col = get_tc(["Product Name", "시약명", "품목명", "제품명"])
+            k_db_col = get_db_col(["Key"])
+            m_db_col = get_db_col(["Manufacturer", "제조사"])
+            c_db_col = get_db_col(["Catalog No.", "제품번호"])
+            db_row_index = {}
+            db_record_cache = {}
+            for r in range(2, db_last_row + 1):
+                r_man = DBManager.normalize_manufacturer(
+                    self.as_excel_text(db_ws.Cells(r, m_db_col).Value)
+                ) if m_db_col > 0 else ""
+                r_num = self.as_excel_text(db_ws.Cells(r, c_db_col).Value) if c_db_col > 0 else ""
+                key = DBManager.crawl_key(r_man, r_num)
+                if key[0] and key[1] and key not in db_row_index:
+                    db_row_index[key] = r
+                    record = {
+                        header: db_ws.Cells(r, column).Value
+                        for header, column in db_cols_idx.items()
+                    }
+                    if not DBManager.needs_recrawl(record):
+                        db_record_cache[key] = record
+
             for tgt_r in range(2, tgt_last_row + 1):
-                mfr_col = get_tc(["Manufacturer", "제조사", "회사"])
-                cat_col = get_tc(["Catalog No.", "제품번호", "품번", "카탈로그 번호"])
-                name_col = get_tc(["Product Name", "시약명", "품목명", "제품명"])
-                
                 raw_m = self.as_excel_text(tgt_ws.Cells(tgt_r, mfr_col).Value) if mfr_col > 0 else ""
                 product_num = self.as_excel_text(tgt_ws.Cells(tgt_r, cat_col).Value) if cat_col > 0 else ""
                 
@@ -979,28 +1007,9 @@ class SyncEngine:
                 chem_name_fallback = str(chem_name_fallback).strip() if chem_name_fallback and chem_name_fallback != "None" else "Unknown"
                 
                 if manufacturer and product_num:
-                    db_result = None
-                    existing_db_row = 0
-                    k_db_col = get_db_col(["Key"])
-                    m_db_col = get_db_col(["Manufacturer", "제조사"])
-                    c_db_col = get_db_col(["Catalog No.", "제품번호"])
-                    
-                    target_key = f"{manufacturer}|{product_num}"
-                    
-                    for r in range(2, db_last_row + 1):
-                        r_key = str(db_ws.Cells(r, k_db_col if k_db_col > 0 else 1).Value).strip()
-                        r_man = DBManager.normalize_manufacturer(db_ws.Cells(r, m_db_col if m_db_col > 0 else 2).Value)
-                        r_num = str(db_ws.Cells(r, c_db_col if c_db_col > 0 else 3).Value).strip()
-                        if r_num.endswith(".0"): r_num = r_num[:-2]
-                        
-                        if (r_key and r_key.lower() == target_key.lower()) or (r_man.lower() == manufacturer.lower() and r_num == product_num):
-                            existing_db_row = r
-                            db_result = {}
-                            for k, idx in db_cols_idx.items():
-                                db_result[k] = db_ws.Cells(r, idx).Value
-                            if DBManager.needs_recrawl(db_result):
-                                db_result = None
-                            break
+                    target_key = DBManager.crawl_key(manufacturer, product_num)
+                    existing_db_row = db_row_index.get(target_key, 0)
+                    db_result = db_record_cache.get(target_key)
                             
                     if not db_result:
                         crawled_data = crawl_results.get(
@@ -1062,6 +1071,10 @@ class SyncEngine:
                                     if not db_result.get("SDS_Local_Path"): db_result["SDS_Local_Path"] = "-"
                                     db_result["Revision Date"] = datetime.datetime.now().strftime("%Y-%m-%d")
                              
+                            db_result = DBManager.build_db_record(
+                                crawled_data, manufacturer, product_num, chem_name_fallback
+                            )
+
                             # Deduplicated DB writing
                             if existing_db_row > 0:
                                 target_db_row = existing_db_row
@@ -1091,6 +1104,7 @@ class SyncEngine:
                                 f'={key_mfr_letter}{target_db_row}&"|"&'
                                 f'{key_cat_letter}{target_db_row}'
                             )
+                            db_row_index[target_key] = target_db_row
                             cnt_db_upd += 1
                         else:
                             db_result = {
@@ -1124,6 +1138,7 @@ class SyncEngine:
                                 f'={key_mfr_letter}{target_db_row}&"|"&'
                                 f'{key_cat_letter}{target_db_row}'
                             )
+                            db_row_index[target_key] = target_db_row
                             cnt_db_upd += 1
                             
                     if db_result:
@@ -1250,8 +1265,8 @@ class SyncEngine:
                 if "가이드(Guide)" in sheet_names and "Guide" not in sheet_names:
                     try:
                         self.target_wb.Worksheets("가이드(Guide)").Name = "Guide"
-                    except:
-                        pass
+                    except Exception as error:
+                        self.log(f"Guide 시트 이름 변경 경고: {error}")
                     sheet_names = [s.Name for s in self.target_wb.Worksheets]
 
                 if guide_sheet_name not in sheet_names:
@@ -1430,7 +1445,8 @@ class SyncEngine:
                 try:
                     rng_r.Validation.Delete()
                     rng_r.Validation.Add(3, 1, 1, "='index'!$A$2:$A$4")
-                except: pass
+                except Exception as error:
+                    self.log(f"Room 유효성 검사 적용 경고: {error}")
                 
             if stemp_col > 0:
                 stemp_l = get_col_letter(stemp_col)
@@ -1438,7 +1454,8 @@ class SyncEngine:
                 try:
                     rng_s.Validation.Delete()
                     rng_s.Validation.Add(3, 1, 1, "='index'!$C$2:$C$5")
-                except: pass
+                except Exception as error:
+                    self.log(f"Storage Temp. 유효성 검사 적용 경고: {error}")
 
                 if write_formulas and mfr_col > 0 and cat_col > 0:
                     mfr_l = get_col_letter(mfr_col)
@@ -1458,7 +1475,8 @@ class SyncEngine:
                         else:
                             db_stemp_c = 0
                             db_key_c = 0
-                    except:
+                    except Exception as error:
+                        self.log(f"DB 조회 열 탐색 경고: {error}")
                         db_stemp_c = 0
                         db_key_c = 0
                     try:
@@ -1493,7 +1511,8 @@ class SyncEngine:
                             formula_rng.Formula = new_formulas[0][0]
                         elif len(new_formulas) > 1:
                             formula_rng.Formula = new_formulas
-                    except: pass
+                    except Exception as error:
+                        self.log(f"조회 수식 보정 경고: {error}")
             if cab_col > 0 and room_col > 0 and stemp_col > 0:
                 cab_l = get_col_letter(cab_col)
                 room_l = get_col_letter(room_col)
@@ -1503,7 +1522,8 @@ class SyncEngine:
                     rng_c.Validation.Delete()
                     formula = f'=IF(COUNTIF(index!$H:$H, {room_l}2&"_"&{stemp_l}2)=0, index!$G$100, OFFSET(index!$G$1, MATCH({room_l}2&"_"&{stemp_l}2, index!$H:$H, 0)-1, 0, COUNTIF(index!$H:$H, {room_l}2&"_"&{stemp_l}2), 1))'
                     rng_c.Validation.Add(3, 1, 1, formula)
-                except: pass
+                except Exception as error:
+                    self.log(f"Cabinet 유효성 검사 적용 경고: {error}")
         except Exception as e:
             self.log(f"유효성 검사 주입 중 경고 (무시됨): {e}")
 
@@ -1596,8 +1616,8 @@ class SyncEngine:
                     if char in symbol_colors:
                         try:
                             cell.GetCharacters(i+1, 1).Font.Color = symbol_colors[char]
-                        except:
-                            pass
+                        except Exception as error:
+                            self.log(f"기호 색상 적용 경고: {error}")
 
     def apply_db_formatting(self, db_ws, max_row):
         if not db_ws: return
@@ -1696,7 +1716,8 @@ class SyncEngine:
         if hasattr(self, 'sb_context_manager') and self.sb_context_manager:
             try:
                 self.sb_context_manager.__exit__(None, None, None)
-            except: pass
+            except Exception as error:
+                self.log(f"브라우저 종료 경고: {error}")
             self.sb_context_manager = None
             self.sb = None
 
@@ -1787,7 +1808,6 @@ def save_db_records_win32com(
                 db_cols_idx[header] = db_last_col
         db_last_row = meaningful_data_last_row(db_ws, db_cols_idx, "db")
 
-        db_last_row = db_ws.Cells(db_ws.Rows.Count, 1).End(-4162).Row
         k_db_col = db_cols_idx.get("Key", 1)
         m_db_col = db_cols_idx.get("Manufacturer", 2)
         c_db_col = db_cols_idx.get("Catalog No.", 3)

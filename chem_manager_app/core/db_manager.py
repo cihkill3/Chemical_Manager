@@ -174,3 +174,69 @@ class DBManager:
         if not sensitivities:
             return "-"
         return ", ".join(sensitivities)
+
+    @staticmethod
+    def build_db_record(crawled_data, manufacturer, catalog_no, fallback_name=""):
+        """Normalize scraper output into one stable DB record shape."""
+        import datetime
+
+        manufacturer = DBManager.normalize_manufacturer(manufacturer)
+        catalog_no = str(catalog_no or "").strip()
+        fallback_name = str(fallback_name or "").strip()
+        base = {
+            "Manufacturer": manufacturer,
+            "Catalog No.": catalog_no,
+            "Product Name": fallback_name,
+            "CAS No.": "-",
+            "Storage Temp.": "-",
+            "Signal Word": "-",
+            "Key Hazards": "-",
+            "Detailed Hazard Classification": "-",
+            "Sensitivity": "-",
+            "Detail_Link": "-",
+            "SDS_Link": "-",
+            "SDS_Local_Path": "-",
+            "Revision Date": "-",
+        }
+        if not crawled_data:
+            base.update({"CAS No.": "Search Failed", "Detail_Link": "Product Not Found"})
+            return base
+        if "error" in crawled_data:
+            manual = crawled_data.get("error") in {"Manual Input Required", "Manual Entry Required"}
+            base.update({
+                "CAS No.": "Manual Input Required" if manual else "Search Failed",
+                "Detail_Link": "-" if manual else "Product Not Found",
+            })
+            return base
+
+        def value(*names):
+            for name in names:
+                candidate = crawled_data.get(name)
+                if candidate not in (None, "", "None", "nan"):
+                    return candidate
+            return ""
+
+        product_name = value("Product Name", "시약명")
+        if product_name in {"제조사 홈페이지에서 검색 실패", "검색 실패", "Search Failed", "Product Not Found", ""}:
+            base.update({"CAS No.": "Search Failed", "Detail_Link": "Product Not Found"})
+            return base
+
+        detail_hazards = value("Detailed Hazard Classification", "상세 위험분류")
+        supplied_sensitivity = value("Sensitivity", "민감성")
+        extracted_sensitivity = DBManager.extract_sensitivity(detail_hazards)
+        sensitivity = extracted_sensitivity if extracted_sensitivity != "-" else (supplied_sensitivity or "-")
+        cas = value("CAS No.", "CAS Number")
+        base.update({
+            "Product Name": product_name or fallback_name,
+            "CAS No.": "N/A" if cas in ("정보 없음", "N/A", "-") else (cas or "N/A"),
+            "Storage Temp.": DBManager.normalize_temperature(value("Storage Temp.", "보관온도")),
+            "Signal Word": value("Signal Word", "신호어") or "-",
+            "Key Hazards": value("Key Hazards", "주요위험") or "-",
+            "Detailed Hazard Classification": detail_hazards or "-",
+            "Sensitivity": sensitivity,
+            "Detail_Link": value("Detail_Link", "상세정보_링크") or "-",
+            "SDS_Link": value("SDS_Link") or "-",
+            "SDS_Local_Path": value("SDS_Local_Path") or "-",
+            "Revision Date": datetime.datetime.now().strftime("%Y-%m-%d"),
+        })
+        return base

@@ -133,9 +133,15 @@ class PDFExporter:
                     # Make valid sheet name
                     sheet_name = f"{r_val}_{t_val}_{c_base}"
                     # Replace invalid characters
-                    for ch in ['\\', '/', '?', '*', '[', ']']:
+                    for ch in ['\\', '/', '?', '*', '[', ']', ':']:
                         sheet_name = sheet_name.replace(ch, '')
-                    sheet_name = sheet_name[:31]
+                    sheet_name = sheet_name[:31] or "Unknown"
+                    base_sheet_name = sheet_name
+                    suffix = 2
+                    while sheet_name in groups:
+                        suffix_text = f"_{suffix}"
+                        sheet_name = f"{base_sheet_name[:31-len(suffix_text)]}{suffix_text}"
+                        suffix += 1
 
                 if sheet_name not in groups:
                     groups[sheet_name] = {"rows": [], "title": title_str}

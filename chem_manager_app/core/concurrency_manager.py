@@ -45,6 +45,10 @@ class ConcurrentEditConflict(RuntimeError):
         super().__init__(f"공동편집 충돌이 감지되었습니다: {preview}")
 
 
+class DuplicateLogicalKeyError(RuntimeError):
+    """Raised when a workbook has ambiguous logical row identity."""
+
+
 @dataclass(frozen=True)
 class FileFingerprint:
     mtime_ns: int
@@ -168,7 +172,11 @@ def snapshot_workbook(path: str) -> dict[str, SheetSnapshot]:
                     key = legacy_order_key(
                         row, legacy_occurrences[identity], row_number=row_number
                     )
-                if key and key not in rows:
+                if key:
+                    if key in rows:
+                        raise DuplicateLogicalKeyError(
+                            f"{worksheet.title} 시트에 중복 논리 키가 있습니다: {key} (행 {row_number})"
+                        )
                     rows[key] = row
             snapshots[key_kind] = SheetSnapshot(
                 name=worksheet.title,

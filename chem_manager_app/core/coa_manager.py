@@ -55,7 +55,17 @@ def valid_cached_document(path, catalog, lot):
         with candidate.open("rb") as stream:
             if stream.read(4) != b"%PDF":
                 return False
-        return _compact(catalog) in _compact(candidate.name) and _compact(lot) in _compact(candidate.name)
+        # Force one-time migration from the legacy Vendor_Catalog_Lot_COA.pdf
+        # convention to the product-aware document naming convention.
+        modern_suffix = any(
+            candidate.name.endswith(f" - {kind}.pdf")
+            for kind in ("COA", "CoC", "Datasheet")
+        )
+        return (
+            modern_suffix
+            and _compact(catalog) in _compact(candidate.name)
+            and _compact(lot) in _compact(candidate.name)
+        )
     except OSError:
         return False
 
@@ -136,10 +146,14 @@ class COAManager:
 
                 def invoke():
                     try:
-                        state["result"] = download_quality_documents(
+                        args = (
                             context, request["vendor"], request["catalog"],
-                            request["lot"], staging_dir
+                            request["lot"], staging_dir,
                         )
+                        if request.get("product_name"):
+                            state["result"] = download_quality_documents(*args, request["product_name"])
+                        else:
+                            state["result"] = download_quality_documents(*args)
                     except BaseException as error:
                         state["error"] = error
                     finally:

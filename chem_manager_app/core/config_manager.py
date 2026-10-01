@@ -3,6 +3,7 @@ import os
 
 import sys
 import copy
+import tempfile
 
 def get_app_root():
     if getattr(sys, 'frozen', False):
@@ -144,9 +145,26 @@ def load_config():
         raise OSError(f"설정 파일을 읽을 수 없습니다: {CONFIG_FILE} ({e})") from e
 
 def save_config(config_data):
+    temp_path = ""
     try:
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        config_dir = os.path.dirname(CONFIG_FILE) or "."
+        os.makedirs(config_dir, exist_ok=True)
+        fd, temp_path = tempfile.mkstemp(
+            prefix=".config_", suffix=".json.tmp", dir=config_dir
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(config_data, f, ensure_ascii=False, indent=4)
+            f.flush()
+        with open(temp_path, "r", encoding="utf-8") as check:
+            json.load(check)
+        os.replace(temp_path, CONFIG_FILE)
+        temp_path = ""
         return True
     except Exception as e:
         raise OSError(f"설정 파일을 저장할 수 없습니다: {CONFIG_FILE} ({e})") from e
+    finally:
+        if temp_path:
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass

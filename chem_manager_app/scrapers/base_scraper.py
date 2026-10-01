@@ -12,6 +12,23 @@ class BaseScraper(ABC):
     coa_vendor = None
     _sds_index_cache = {}
 
+    @staticmethod
+    def validate_pdf_bytes(content, min_size=1000):
+        """Return True only for a parseable PDF with at least one page."""
+        if not isinstance(content, (bytes, bytearray)):
+            return False
+        if len(content) < min_size or not bytes(content).startswith(b"%PDF"):
+            return False
+        try:
+            import pymupdf
+            document = pymupdf.open(stream=bytes(content), filetype="pdf")
+            try:
+                return document.page_count > 0
+            finally:
+                document.close()
+        except Exception:
+            return False
+
     def __init__(self, browser_context=None, fast_mode=False, base_dir=None, check_stop_fn=None, existing_sds_path=None):
         self.context = browser_context
         self.fast_mode = fast_mode

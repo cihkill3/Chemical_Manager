@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QColorDialog, QGroupBox, QGridLayout)
 from PyQt6.QtGui import QColor, QPalette
+import copy
 
 from gui.styles import MODERN_STYLE
 
@@ -11,7 +12,7 @@ class ColorDialog(QDialog):
         self.resize(500, 400)
         self.setStyleSheet(MODERN_STYLE)
         
-        self.config = config_data.copy()
+        self.config = copy.deepcopy(config_data)
         if "colors" not in self.config:
             self.config["colors"] = {}
         

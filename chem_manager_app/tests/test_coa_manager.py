@@ -56,7 +56,7 @@ class COAManagerTests(unittest.TestCase):
         self.assertFalse(lots_equal("0000494416", "0000494417"))
         self.assertTrue(is_supported_vendor("Sigma-Aldrich"))
         with tempfile.TemporaryDirectory() as folder:
-            path = os.path.join(folder, "TCI_A123_LOT9_COA.pdf")
+            path = os.path.join(folder, "시약명 (TCI, A123, Lot_LOT9) - COA.pdf")
             with open(path, "wb") as stream:
                 stream.write(b"%PDF" + b"x" * 1200)
             self.assertTrue(valid_cached_document(path, "A123", "LOT9"))

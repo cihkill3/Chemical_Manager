@@ -186,38 +186,24 @@ class AldrichScraper(BaseScraper):
             
             if res and 'data' in res:
                 content = bytes(res['data'])
-                if len(content) > 1000:
-                    # Validate PDF using PyMuPDF (pymupdf)
-                    is_valid = False
-                    try:
-                        import pymupdf as fitz
-                        doc = fitz.open(stream=content, filetype="pdf")
-                        if len(doc) > 0:
-                            text = doc[0].get_text() or ""
-                            if len(text) > 10 or len(doc) >= 1:
-                                is_valid = True
-                        doc.close()
-                    except:
-                        is_valid = True # fallback if parser fails on valid pdf
-                        
-                    if is_valid:
-                        p_name = result.get("Product Name", result.get("시약명", ""))
-                        filename = DBManager.format_sds_filename(p_name, "Aldrich", clean_product_number)
-                        
-                        sds_dir = os.path.join(self.base_dir, "sds")
-                        os.makedirs(sds_dir, exist_ok=True)
-                        sds_path = os.path.join(sds_dir, f"{filename}.pdf")
-                        
-                        if DBManager.is_sds_fresh(sds_path, max_days=180):
-                            print(f"  [Aldrich] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
-                            result["SDS_Local_Path"] = sds_path
-                        else:
-                            print(f"  [Aldrich] Saving SDS PDF to: {sds_path} (bytes: {len(content)})")
-                            with open(sds_path, 'wb') as f:
-                                f.write(content)
-                            result["SDS_Local_Path"] = sds_path
+                if self.validate_pdf_bytes(content):
+                    p_name = result.get("Product Name", result.get("시약명", ""))
+                    filename = DBManager.format_sds_filename(p_name, "Aldrich", clean_product_number)
+                    
+                    sds_dir = os.path.join(self.base_dir, "sds")
+                    os.makedirs(sds_dir, exist_ok=True)
+                    sds_path = os.path.join(sds_dir, f"{filename}.pdf")
+                    
+                    if DBManager.is_sds_fresh(sds_path, max_days=180):
+                        print(f"  [Aldrich] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
+                        result["SDS_Local_Path"] = sds_path
                     else:
-                        print(f"  [Aldrich] SDS PDF validation failed (len: {len(content)})")
+                        print(f"  [Aldrich] Saving SDS PDF to: {sds_path} (bytes: {len(content)})")
+                        with open(sds_path, 'wb') as f:
+                            f.write(content)
+                        result["SDS_Local_Path"] = sds_path
+                else:
+                    print(f"  [Aldrich] SDS PDF validation failed (len: {len(content)})")
             elif res and 'error' in res:
                 print(f"  [Aldrich] SDS Fetch Error: {res['error']}")
                 

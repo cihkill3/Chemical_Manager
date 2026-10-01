@@ -188,24 +188,15 @@ class ThermofisherScraper(BaseScraper):
                     if pdf_resp.status_code == 200:
                         content = pdf_resp.content
                         
-                        # Validate PDF using PyMuPDF (pymupdf)
-                        is_valid = False
-                        try:
-                            import pymupdf as fitz
-                            doc = fitz.open(stream=content, filetype="pdf")
-                            if len(doc) > 0:
-                                is_valid = True
-                            doc.close()
-                        except:
-                            is_valid = True
-                            
-                        if is_valid:
+                        if self.validate_pdf_bytes(content):
                             if DBManager.is_sds_fresh(sds_path, max_days=180):
                                 print(f"  [TF] Existing SDS PDF is fresh (< 6 months old): {sds_path}. Skipping rewrite.")
                             else:
                                 with open(sds_path, 'wb') as f:
                                     f.write(content)
                             result["SDS_Local_Path"] = sds_path
+                        else:
+                            print(f"  [TF] SDS PDF validation failed (len: {len(content)})")
                 else:
                     result["SDS_Link"] = "-"
                     if fresh_path:

@@ -353,7 +353,7 @@ class DbUpdateWorker(QThread):
                             from scrapers.registry import create_scraper
                             scraper = create_scraper(
                                 man, browser_context=sb, fast_mode=fast_mode,
-                                base_dir=src_folder, check_stop_fn=check_stop,
+                                base_dir=os.path.dirname(target_path), check_stop_fn=check_stop,
                                 existing_sds_path=data.get("existing_sds_path"),
                             )
                             crawled_data = scraper.scrape(cat) if scraper else {"error": "Manual Input Required"}
@@ -434,6 +434,9 @@ class DbUpdateWorker(QThread):
                             db_result["Sensitivity"] = "-"
                             db_result["Revision Date"] = "-"
                             
+                        db_result = DBManager.build_db_record(
+                            crawled_data, man, cat, fallback_name
+                        )
                         crawled_results_batch.append(db_result)
                         updated += 1
 
@@ -590,6 +593,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("연구실 시약 주문 관리 시스템 (Chemical Manager)")
         self.resize(880, 680)
         self.config = config_data.copy()
+        self._log_write_failed = False
         
         self.setStyleSheet(MODERN_STYLE)
         self.init_ui()
@@ -995,7 +999,13 @@ class MainWindow(QMainWindow):
         self.config["headless"] = self.chk_headless.isChecked()
         
         import utils.startup_manager as sm
-        sm.set_run_on_startup(self.config["run_on_startup"])
+        startup_ok = sm.set_run_on_startup(self.config["run_on_startup"])
+        if not startup_ok:
+            self.log("윈도우 시작프로그램 설정을 저장하지 못했습니다.")
+            QMessageBox.warning(
+                self, "시작프로그램 설정 오류",
+                "윈도우 시작 시 자동 실행 설정을 적용하지 못했습니다."
+            )
         
         try:
             from core.config_manager import save_config
@@ -1027,6 +1037,15 @@ class MainWindow(QMainWindow):
         except Exception as error:
             import sys
             print(f"Application log write warning: {error}", file=sys.stderr)
+            if not self._log_write_failed:
+                self._log_write_failed = True
+                try:
+                    self.statusBar().showMessage(
+                        "로그 파일을 저장하지 못했습니다. 파일 권한과 디스크 공간을 확인하세요.",
+                        10000,
+                    )
+                except Exception:
+                    pass
 
     def run_manual_sync(self):
         if hasattr(self, 'sync_worker') and self.sync_worker and self.sync_worker.isRunning():
